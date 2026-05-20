@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  fastapi-backend-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi-backend-test
+    ports:
+      - "8001:8000"  # 使用不同端口避免与开发环境冲突
+    env_file:
+      - .env.test
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@lims-postgres:5432/lims_dev
+      - REDIS_URL=redis://lims-redis:6379/0
+    volumes:
+      - ./logs:/app/logs
+      - ./exports:/app/exports
+      - ./uploads:/app/uploads
+    networks:
+      - lims-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  lims-network:
+    external: true

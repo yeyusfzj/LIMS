@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>检测方法库测试</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <h1>检测方法库API测试</h1>
+  <div id="result"></div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:3000/api';
+    let authToken = '';
+
+    async function login() {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+          username: 'admin',
+          password: 'Admin@123456'
+        });
+        
+        authToken = response.data.data.accessToken;
+        console.log('登录成功，Token:', authToken.substring(0, 30) + '...');
+        document.getElementById('result').innerHTML += '<p>✓ 登录成功</p>';
+        
+        // 登录成功后获取检测方法列表
+        await getMethodList();
+      } catch (error) {
+        console.error('登录失败:', error);
+        document.getElementById('result').innerHTML += '<p>✗ 登录失败: ' + error.message + '</p>';
+      }
+    }
+
+    async function getMethodList() {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/methods`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          },
+          params: {
+            page: 1,
+            pageSize: 10
+          }
+        });
+        
+        console.log('完整响应:', response);
+        console.log('响应数据:', response.data);
+        
+        const data = response.data.data;
+        const methods = data.data || [];
+        const total = data.total || 0;
+        
+        document.getElementById('result').innerHTML += `<p>✓ 获取检测方法列表成功</p>`;
+        document.getElementById('result').innerHTML += `<p>共 ${total} 条记录</p>`;
+        
+        if (methods.length > 0) {
+          document.getElementById('result').innerHTML += '<h2>检测方法列表:</h2>';
+          methods.forEach((method, index) => {
+            document.getElementById('result').innerHTML += 
+              `<p>${index + 1}. ${method.code} - ${method.name} (${method.category})</p>`;
+          });
+        }
+      } catch (error) {
+        console.error('获取检测方法列表失败:', error);
+        document.getElementById('result').innerHTML += '<p>✗ 获取检测方法列表失败: ' + error.message + '</p>';
+      }
+    }
+
+    // 页面加载后自动登录
+    login();
+  </script>
+</body>
+</html>

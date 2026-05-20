@@ -1,0 +1,1089 @@
+// Prisma Schema for Laboratory Management System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户状态枚举
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
+
+// 用户模型
+model User {
+  id           String     @id @default(uuid())
+  username     String     @unique
+  passwordHash String
+  email        String     @unique
+  fullName     String
+  department   String?
+  position     String?
+  phone        String?
+  status       UserStatus @default(ACTIVE)
+  roles        UserRole[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  lastLoginAt  DateTime?
+
+  @@map("users")
+}
+
+// 角色模型
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  permissions Permission[]
+  users       UserRole[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("roles")
+}
+
+// 权限模型
+model Permission {
+  id        String   @id @default(uuid())
+  resource  String
+  action    String
+  roles     Role[]
+  createdAt DateTime @default(now())
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+// 用户角色关联表
+model UserRole {
+  userId     String
+  roleId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// 审计日志模型
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  username   String
+  action     String
+  resource   String
+  resourceId String
+  changes    Json?
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime @default(now())
+
+  @@index([userId])
+  @@index([resource, resourceId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+// 归档审计日志模型
+model ArchivedAuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  username    String
+  action      String
+  resource    String
+  resourceId  String
+  changes     Json?
+  ipAddress   String?
+  userAgent   String?
+  timestamp   DateTime
+  archivedAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([resource, resourceId])
+  @@index([timestamp])
+  @@index([archivedAt])
+  @@map("archived_audit_logs")
+}
+
+// ============================================
+// 样品管理模型
+// ============================================
+
+// 样品状态枚举
+enum SampleStatus {
+  REGISTERED // 已登记
+  IN_TESTING // 检测中
+  TESTING_COMPLETE // 检测完成
+  IN_AUDIT // 审核中
+  AUDIT_COMPLETE // 审核完成
+  RELEASED // 已放行
+  ARCHIVED // 已归档
+}
+
+// 优先级枚举
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// 检测项状态枚举
+enum TestItemStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  ABNORMAL
+}
+
+// 流转状态枚举
+enum TransferStatus {
+  PENDING
+  IN_TRANSIT
+  RECEIVED
+  REJECTED
+}
+
+// 样品模型
+model Sample {
+  id               String       @id @default(uuid())
+  barcode          String       @unique
+  sampleNumber     String       @unique
+  clientName       String
+  clientContact    String?
+  sampleName       String
+  sampleType       String
+  sampleCategory   String
+  quantity         Float
+  unit             String
+  receivedDate     DateTime
+  samplingDate     DateTime?
+  samplingLocation String?
+  samplingPerson   String?
+  storageLocation  String?
+  storageCondition String?
+  status           SampleStatus @default(REGISTERED)
+  priority         Priority     @default(NORMAL)
+  description      String?
+  remarks          String?
+  version          Int          @default(1) // 乐观锁版本号
+
+  // 关联关系
+  parentSampleId String?
+  parentSample   Sample?  @relation("SampleSplit", fields: [parentSampleId], references: [id])
+  childSamples   Sample[] @relation("SampleSplit")
+  mergedFromIds  String[] // 合样来源样品 ID 数组
+
+  // 工作流
+  workflowInstanceId String?           @unique
+  workflowInstance   WorkflowInstance? @relation(fields: [workflowInstanceId], references: [id])
+
+  // 检测项目
+  testItems TestItem[]
+  results   Result[]
+
+  // 审核和判定
+  qualityJudgment QualityJudgment?
+
+  // 报告
+  reports Report[]
+
+  // 流转记录
+  transfers Transfer[]
+
+  // 审计
+  createdBy  String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  releasedAt DateTime?
+  releasedBy String?
+
+  @@index([barcode])
+  @@index([sampleNumber])
+  @@index([status])
+  @@index([clientName])
+  @@map("samples")
+}
+
+// 检测项模型
+model TestItem {
+  id             String         @id @default(uuid())
+  sampleId       String
+  sample         Sample         @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  testMethod     String
+  testStandard   String?
+  testParameters Json // 检测参数配置
+  status         TestItemStatus @default(PENDING)
+  assignedTo     String?
+  assignedAt     DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([sampleId])
+  @@index([status])
+  @@map("test_items")
+}
+
+// 流转记录模型
+model Transfer {
+  id           String         @id @default(uuid())
+  sampleId     String
+  sample       Sample         @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  fromLocation String
+  toLocation   String
+  fromPerson   String
+  toPerson     String
+  transferDate DateTime       @default(now())
+  receivedDate DateTime?
+  status       TransferStatus @default(PENDING)
+  remarks      String?
+
+  // 双方确认
+  senderConfirmed   Boolean @default(false)
+  receiverConfirmed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([sampleId])
+  @@index([transferDate])
+  @@map("transfers")
+}
+
+// ============================================
+// 工作流引擎模型
+// ============================================
+
+// 工作流状态枚举
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+// 工作流实例状态枚举
+enum InstanceStatus {
+  RUNNING
+  COMPLETED
+  SUSPENDED
+  TERMINATED
+}
+
+// 任务状态枚举
+enum TaskStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+// 工作流配置模型
+model Workflow {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  version     Int            @default(1)
+  config      Json // 工作流配置（节点和边）
+  status      WorkflowStatus @default(DRAFT)
+  isActive    Boolean        @default(false)
+
+  instances WorkflowInstance[]
+
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  activatedAt DateTime?
+
+  @@index([status])
+  @@index([isActive])
+  @@map("workflows")
+}
+
+// 工作流实例模型
+model WorkflowInstance {
+  id         String   @id @default(uuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id])
+  sampleId   String   @unique
+  sample     Sample?
+
+  currentNodes String[] // 当前所在节点 ID 数组
+  status       InstanceStatus @default(RUNNING)
+  variables    Json           @default("{}")
+
+  tasks Task[]
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([workflowId])
+  @@index([status])
+  @@map("workflow_instances")
+}
+
+// 任务模型
+model Task {
+  id         String           @id @default(uuid())
+  instanceId String
+  instance   WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  nodeId     String
+  nodeName   String
+  nodeType   String
+
+  assignedTo String?
+  assignedAt DateTime?
+  status     TaskStatus @default(PENDING)
+  priority   Priority   @default(NORMAL)
+
+  result      Json?
+  completedAt DateTime?
+
+  // 审核任务
+  auditTasks AuditTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([instanceId])
+  @@index([assignedTo])
+  @@index([status])
+  @@map("tasks")
+}
+
+// ============================================
+// 检测结果模型
+// ============================================
+
+// 结果来源枚举
+enum ResultSource {
+  MANUAL // 手工录入
+  INSTRUMENT // 仪器导入
+  CALCULATED // 公式计算
+}
+
+// 检测结果模型
+model Result {
+  id         String  @id @default(uuid())
+  sampleId   String
+  sample     Sample  @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  testItemId String
+  parameter  String // 检测参数名称
+  value      Float?
+  textValue  String? // 文本型结果
+  unit       String?
+  method     String
+  version    Int     @default(1) // 乐观锁版本号
+
+  // 结果来源
+  source       ResultSource @default(MANUAL)
+  instrumentId String?
+
+  // 计算公式
+  formulaId    String?
+  isCalculated Boolean @default(false)
+
+  // 异常检测
+  isAbnormal     Boolean @default(false)
+  abnormalReason String?
+
+  // 复测
+  isRetest         Boolean @default(false)
+  originalResultId String?
+  retestReason     String?
+
+  // 审计
+  enteredBy  String
+  enteredAt  DateTime  @default(now())
+  reviewedBy String?
+  reviewedAt DateTime?
+
+  @@index([sampleId])
+  @@index([testItemId])
+  @@map("results")
+}
+
+// 公式模型
+model Formula {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  expression  String // 公式表达式
+  parameters  Json // 参数定义
+  isActive    Boolean @default(true)
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("formulas")
+}
+
+// ============================================
+// 审核和判定模型
+// ============================================
+
+// 审核状态枚举
+enum AuditStatus {
+  PENDING
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+}
+
+// 审核决策枚举
+enum AuditDecision {
+  APPROVE
+  REJECT
+  RETURN
+}
+
+// 判定结果枚举
+enum JudgmentResult {
+  QUALIFIED
+  UNQUALIFIED
+  PENDING
+}
+
+// 审核任务模型
+model AuditTask {
+  id        String         @id @default(uuid())
+  taskId    String
+  task      Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  level     Int // 审核级别：1, 2, 3...
+  auditorId String
+  status    AuditStatus    @default(PENDING)
+  decision  AuditDecision?
+  comments  String?
+
+  submittedAt DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([taskId])
+  @@index([auditorId])
+  @@index([status])
+  @@map("audit_tasks")
+}
+
+// 质量判定模型
+model QualityJudgment {
+  id       String @id @default(uuid())
+  sampleId String @unique
+  sample   Sample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  result      JudgmentResult
+  basis       String         @db.Text // 判定依据（JSON 格式）
+  isAutomatic Boolean        @default(true)
+  version     Int            @default(1) // 乐观锁版本号
+
+  judgedBy   String
+  judgedAt   DateTime  @default(now())
+  reviewedBy String?
+  reviewedAt DateTime?
+
+  // 判定历史
+  history JudgmentHistory[]
+
+  @@index([result])
+  @@map("quality_judgments")
+}
+
+// 判定规则配置模型
+model JudgmentRule {
+  id           String  @id @default(uuid())
+  name         String
+  description  String?
+  testItemType String // 检测项类型
+  conditions   Json // 判定条件配置
+  priority     Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([testItemType])
+  @@index([isActive])
+  @@map("judgment_rules")
+}
+
+// 判定历史记录模型
+model JudgmentHistory {
+  id         String @id @default(uuid())
+  judgmentId String
+  judgment   QualityJudgment @relation(fields: [judgmentId], references: [id], onDelete: Cascade)
+  sampleId   String
+
+  previousResult JudgmentResult
+  newResult      JudgmentResult
+  changeReason   String         @db.Text
+  changedBy      String
+  changedAt      DateTime       @default(now())
+
+  @@index([judgmentId])
+  @@index([sampleId])
+  @@index([changedAt])
+  @@map("judgment_history")
+}
+
+// ============================================
+// 报告管理模型
+// ============================================
+
+// 报告状态枚举
+enum ReportStatus {
+  DRAFT
+  PENDING_SIGNATURE
+  SIGNED
+  DISTRIBUTED
+  RECALLED
+}
+
+// 分发方式枚举
+enum DistributionMethod {
+  EMAIL
+  DOWNLOAD
+  PRINT
+}
+
+// 分发状态枚举
+enum DistributionStatus {
+  PENDING
+  SENT
+  RECEIVED
+  FAILED
+}
+
+// 报告模板模型
+model ReportTemplate {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  category    String
+  content     String  @db.Text // 模板内容（HTML）
+  variables   Json // 变量定义
+  version     Int     @default(1)
+  isActive    Boolean @default(true)
+
+  reports Report[]
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("report_templates")
+}
+
+// 报告模型
+model Report {
+  id           String         @id @default(uuid())
+  reportNumber String         @unique
+  sampleId     String
+  sample       Sample         @relation(fields: [sampleId], references: [id])
+  templateId   String
+  template     ReportTemplate @relation(fields: [templateId], references: [id])
+
+  content String       @db.Text // 生成的报告内容
+  status  ReportStatus @default(DRAFT)
+  version Int          @default(1) // 乐观锁版本号
+
+  // 签名
+  signatures Signature[]
+
+  // 分发
+  distributions Distribution[]
+
+  generatedBy  String
+  generatedAt  DateTime  @default(now())
+  approvedAt   DateTime?
+  recalledAt   DateTime?
+  recallReason String?
+
+  @@index([reportNumber])
+  @@index([sampleId])
+  @@index([status])
+  @@map("reports")
+}
+
+// 签名模型
+model Signature {
+  id            String   @id @default(uuid())
+  reportId      String
+  report        Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  signerId      String
+  signerName    String
+  signerRole    String
+  signatureData String   @db.Text // 加密的签名数据
+  signedAt      DateTime @default(now())
+
+  @@index([reportId])
+  @@map("signatures")
+}
+
+// 分发记录模型
+model Distribution {
+  id             String             @id @default(uuid())
+  reportId       String
+  report         Report             @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  method         DistributionMethod
+  recipient      String
+  recipientEmail String?
+  status         DistributionStatus @default(PENDING)
+
+  sentAt     DateTime?
+  receivedAt DateTime?
+
+  @@index([reportId])
+  @@map("distributions")
+}
+
+// 备份状态枚举
+enum BackupStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  VERIFIED
+}
+
+// 备份类型枚举
+enum BackupType {
+  MANUAL
+  SCHEDULED
+}
+
+// 备份记录模型
+model BackupRecord {
+  id          String       @id @default(uuid())
+  filename    String
+  filepath    String
+  size        Int
+  type        BackupType
+  status      BackupStatus @default(PENDING)
+  checksum    String?
+  error       String?
+  createdBy   String
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
+  verifiedAt  DateTime?
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("backup_records")
+}
+
+// ============================================
+// 检测方法模型
+// ============================================
+
+// 检测方法状态枚举
+enum MethodStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+// 检测方法模型
+model TestMethod {
+  id               String       @id @default(uuid())
+  code             String       @unique
+  name             String
+  category         String
+  version          String
+  status           MethodStatus @default(DRAFT)
+  scope            String?
+  description      String?      @db.Text
+  equipment        Json // 设备列表
+  steps            Json // 步骤列表
+  precision        String?
+  accuracy         String?
+  detectionLimit   String?
+  measurementRange String?
+  qualityControl   String?      @db.Text
+  safetyNotes      String?      @db.Text
+  operationNotes   String?      @db.Text
+  createdBy        String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([code])
+  @@index([category])
+  @@index([status])
+  @@map("test_methods")
+}
+
+// ============================================
+// 审核管理模型
+// ============================================
+
+// 审核意见模板类型枚举
+enum CommentTemplateType {
+  APPROVED
+  NEED_REVISION
+  REJECTED
+  OTHER
+}
+
+// 审核流程配置状态枚举
+enum WorkflowConfigStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// 审核意见模板模型
+model AuditCommentTemplate {
+  id         String              @id @default(uuid())
+  name       String              @unique
+  type       CommentTemplateType
+  content    String              @db.Text
+  usageCount Int                 @default(0)
+  isDefault  Boolean             @default(false)
+  createdBy  String
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@index([type])
+  @@index([isDefault])
+  @@index([createdBy])
+  @@map("audit_comment_templates")
+}
+
+// 审核流程配置模型
+model AuditWorkflowConfig {
+  id            String               @id @default(uuid())
+  name          String               @unique
+  sampleTypes   String[] // 适用的样品类型数组
+  levels        Json // 审核级别配置（JSON 格式）
+  parallelAudit Boolean              @default(false)
+  status        WorkflowConfigStatus @default(ACTIVE)
+  createdBy     String
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([status])
+  @@index([createdBy])
+  @@map("audit_workflow_configs")
+}
+
+// 审核历史记录模型
+model AuditHistory {
+  id          String   @id @default(uuid())
+  taskId      String
+  action      String // 操作类型（如：created, updated, approved, rejected, reassigned）
+  changes     Json // 变更内容（JSON 格式）
+  performedBy String
+  performedAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([performedAt])
+  @@index([performedBy])
+  @@map("audit_history")
+}
+
+// ============================================
+// 仪器管理模型
+// ============================================
+
+// 仪器状态枚举
+enum InstrumentStatus {
+  IN_USE        // 在用
+  STANDBY       // 备用
+  MAINTENANCE   // 维修中
+  CALIBRATING   // 校准中
+  PENDING_DISPOSAL // 待报废
+  DISPOSED      // 已报废
+}
+
+// 流转状态枚举
+enum InstrumentTransferStatus {
+  PENDING    // 待确认
+  CONFIRMED  // 已确认
+  REJECTED   // 已拒绝
+  COMPLETED  // 已完成
+}
+
+// 报废状态枚举
+enum DisposalStatus {
+  PENDING   // 待审批
+  APPROVED  // 已批准
+  REJECTED  // 已拒绝
+  COMPLETED // 已完成
+}
+
+// 维护类型枚举
+enum MaintenanceType {
+  ROUTINE      // 例行保养
+  REPAIR       // 维修
+  PARTS_REPLACEMENT // 部件更换
+  CLEANING     // 清洁
+  OTHER        // 其他
+}
+
+// 校准结果枚举
+enum CalibrationResult {
+  QUALIFIED     // 合格
+  UNQUALIFIED   // 不合格
+  CONDITIONAL   // 有条件合格
+}
+
+// 仪器模型
+model Instrument {
+  id                String            @id @default(uuid())
+  code              String            @unique // 仪器编码
+  name              String            // 仪器名称
+  model             String?           // 型号
+  manufacturer      String?           // 制造商
+  serialNumber      String?           // 序列号
+  purchaseDate      DateTime?         // 购置日期
+  purchasePrice     Float?            // 购置价格
+  
+  // 技术参数 (JSON格式存储)
+  technicalParams   Json?             // { measurementRange, precision, resolution, etc. }
+  
+  // 当前状态
+  status            InstrumentStatus  @default(IN_USE)
+  currentLocation   String?           // 当前位置
+  currentDepartment String?           // 当前部门
+  currentResponsible String?          // 当前负责人
+  
+  // 使用信息
+  usageYears        Int?              // 使用年限
+  warrantyExpiry    DateTime?         // 保修到期日期
+  
+  // 描述信息
+  description       String?           @db.Text
+  remarks           String?           @db.Text
+  
+  // 关联关系
+  transfers         InstrumentTransfer[]
+  maintenanceRecords MaintenanceRecord[]
+  calibrationRecords CalibrationRecord[]
+  documents         InstrumentDocument[]
+  disposalRecord    DisposalRecord?
+  
+  // 审计字段
+  createdBy         String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  @@index([code])
+  @@index([status])
+  @@index([currentDepartment])
+  @@index([name])
+  @@map("instruments")
+}
+
+// 仪器流转记录模型
+model InstrumentTransfer {
+  id                String                    @id @default(uuid())
+  instrumentId      String
+  instrument        Instrument                @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  
+  // 流转信息
+  fromDepartment    String
+  toDepartment      String
+  fromResponsible   String
+  toResponsible     String
+  transferReason    String?                   @db.Text
+  expectedReturnDate DateTime?
+  
+  // 状态
+  status            InstrumentTransferStatus  @default(PENDING)
+  
+  // 确认信息
+  confirmedAt       DateTime?
+  confirmedBy       String?
+  rejectedAt        DateTime?
+  rejectedBy        String?
+  rejectionReason   String?                   @db.Text
+  
+  // 审计字段
+  createdBy         String
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  
+  @@index([instrumentId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("instrument_transfers")
+}
+
+// 维护记录模型
+model MaintenanceRecord {
+  id                String            @id @default(uuid())
+  instrumentId      String
+  instrument        Instrument        @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  
+  // 维护信息
+  maintenanceDate   DateTime
+  maintenanceType   MaintenanceType
+  maintenanceContent String           @db.Text
+  maintenancePerson String
+  maintenanceCost   Float?
+  
+  // 下次维护
+  nextMaintenanceDate DateTime?
+  
+  // 描述
+  remarks           String?           @db.Text
+  
+  // 关联文档
+  documents         MaintenanceDocument[]
+  
+  // 审计字段
+  createdBy         String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  @@index([instrumentId])
+  @@index([maintenanceDate])
+  @@map("maintenance_records")
+}
+
+// 校准记录模型
+model CalibrationRecord {
+  id                String              @id @default(uuid())
+  instrumentId      String
+  instrument        Instrument          @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  
+  // 校准信息
+  calibrationDate   DateTime
+  calibrationOrg    String              // 校准机构
+  certificateNumber String?             // 证书编号
+  calibrationResult CalibrationResult
+  
+  // 下次校准
+  nextCalibrationDate DateTime?
+  
+  // 描述
+  remarks           String?             @db.Text
+  
+  // 证书文件
+  certificateFileId String?
+  certificateFile   InstrumentDocument? @relation(fields: [certificateFileId], references: [id])
+  
+  // 审计字段
+  createdBy         String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  @@index([instrumentId])
+  @@index([calibrationDate])
+  @@index([nextCalibrationDate])
+  @@map("calibration_records")
+}
+
+// 报废记录模型
+model DisposalRecord {
+  id                String          @id @default(uuid())
+  instrumentId      String          @unique
+  instrument        Instrument      @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  
+  // 报废信息
+  disposalReason    String          @db.Text
+  disposalDate      DateTime?
+  
+  // 审批信息
+  status            DisposalStatus  @default(PENDING)
+  approvedBy        String?
+  approvedAt        DateTime?
+  rejectedBy        String?
+  rejectedAt        DateTime?
+  rejectionReason   String?         @db.Text
+  
+  // 关联文档
+  documents         DisposalDocument[]
+  
+  // 审计字段
+  createdBy         String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([status])
+  @@index([createdAt])
+  @@map("disposal_records")
+}
+
+// 仪器文档模型
+model InstrumentDocument {
+  id                String              @id @default(uuid())
+  instrumentId      String
+  instrument        Instrument          @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  
+  // 文档信息
+  fileName          String
+  fileSize          Int
+  filePath          String
+  fileType          String
+  documentType      String              // manual, certificate, photo, report, other
+  
+  // 描述
+  description       String?
+  
+  // 关联
+  calibrationRecords CalibrationRecord[]
+  
+  // 审计字段
+  uploadedBy        String
+  uploadedAt        DateTime            @default(now())
+  
+  @@index([instrumentId])
+  @@index([documentType])
+  @@map("instrument_documents")
+}
+
+// 维护文档模型
+model MaintenanceDocument {
+  id                String              @id @default(uuid())
+  maintenanceId     String
+  maintenance       MaintenanceRecord   @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  
+  // 文档信息
+  fileName          String
+  fileSize          Int
+  filePath          String
+  fileType          String
+  
+  // 描述
+  description       String?
+  
+  // 审计字段
+  uploadedBy        String
+  uploadedAt        DateTime            @default(now())
+  
+  @@index([maintenanceId])
+  @@map("maintenance_documents")
+}
+
+// 报废文档模型
+model DisposalDocument {
+  id                String          @id @default(uuid())
+  disposalId        String
+  disposal          DisposalRecord  @relation(fields: [disposalId], references: [id], onDelete: Cascade)
+  
+  // 文档信息
+  fileName          String
+  fileSize          Int
+  filePath          String
+  fileType          String
+  
+  // 描述
+  description       String?
+  
+  // 审计字段
+  uploadedBy        String
+  uploadedAt        DateTime        @default(now())
+  
+  @@index([disposalId])
+  @@map("disposal_documents")
+}
+

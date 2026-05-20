@@ -1,0 +1,8 @@
+{
+  "equipment": "进行{experiment_type}需要以下设备：\n{equipment_list}",
+  "materials": "进行{experiment_type}需要以下材料：\n{material_list}",
+  "steps": "进行{experiment_type}的步骤如下：\n{step_list}",
+  "indicators": "进行{experiment_type}需要检测以下指标：\n{indicator_list}",
+  "time": "进行{experiment_type}预计需要：{estimated_time}",
+  "default": "抱歉，我没有找到相关信息。请尝试更具体的问题，或者提供实验类型信息。"
+}

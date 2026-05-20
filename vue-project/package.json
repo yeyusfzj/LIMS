@@ -1,0 +1,42 @@
+{
+  "name": "vue-project",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest --run"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@vueup/vue-quill": "^1.2.0",
+    "axios": "^1.13.3",
+    "echarts": "^6.0.0",
+    "element-plus": "^2.13.1",
+    "marked": "^18.0.3",
+    "pinia": "^3.0.4",
+    "quill": "^2.0.3",
+    "vue": "^3.5.26",
+    "vue-router": "^4.6.4",
+    "vuedraggable": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.9",
+    "@vitejs/plugin-vue": "^6.0.3",
+    "@vue/test-utils": "^2.4.6",
+    "@vue/tsconfig": "^0.8.1",
+    "fast-check": "^3.15.0",
+    "jsdom": "^25.0.1",
+    "sass-embedded": "^1.97.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "vite-plugin-vue-devtools": "^8.0.5",
+    "vitest": "^2.1.8"
+  }
+}

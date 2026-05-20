@@ -1,0 +1,6 @@
+﻿sampleId,testItemId,parameter,value,textValue,unit,method,instrumentId
+sample-001,item-001,pH,7.5,,pH,GB/T 5750.4-2006,instrument-001
+sample-001,item-002,外观,,无色透明,,目测法,
+sample-001,item-003,浊度,2.3,,NTU,GB/T 5750.4-2006,instrument-002
+sample-002,item-004,色度,5,,度,GB/T 5750.4-2006,instrument-003
+sample-002,item-005,气味,,无异味,,嗅觉法,

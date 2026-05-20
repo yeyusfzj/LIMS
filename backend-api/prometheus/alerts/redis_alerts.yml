@@ -1,0 +1,71 @@
+# Redis 告警规则
+
+groups:
+  - name: redis_alerts
+    interval: 30s
+    rules:
+      # Redis 不可用
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis 不可用"
+          description: "Redis 服务无法连接"
+
+      # Redis 内存使用率过高
+      - alert: HighRedisMemoryUsage
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis 内存使用率过高"
+          description: "Redis 内存使用率超过 85%，当前值: {{ $value }}%"
+
+      # Redis 连接数过高
+      - alert: HighRedisConnections
+        expr: redis_connected_clients > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis 连接数过高"
+          description: "Redis 连接数超过 1000，当前值: {{ $value }}"
+
+      # Redis 命令执行缓慢
+      - alert: SlowRedisCommands
+        expr: rate(redis_commands_duration_seconds_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis 命令执行缓慢"
+          description: "Redis 平均命令执行时间超过 100ms"
+
+      # Redis 键过期率异常
+      - alert: HighRedisEvictionRate
+        expr: rate(redis_evicted_keys_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis 键过期率异常"
+          description: "Redis 键过期速率超过 100/s，可能内存不足"
+
+      # Redis 持久化失败
+      - alert: RedisPersistenceFailure
+        expr: redis_rdb_last_save_timestamp_seconds < (time() - 3600)
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis 持久化失败"
+          description: "Redis 超过 1 小时未成功保存 RDB 快照"

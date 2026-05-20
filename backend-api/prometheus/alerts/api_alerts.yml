@@ -1,0 +1,60 @@
+# API 告警规则
+
+groups:
+  - name: api_alerts
+    interval: 30s
+    rules:
+      # API 响应时间告警
+      - alert: HighAPIResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API 响应时间过高"
+          description: "API P95 响应时间超过 1 秒，当前值: {{ $value }}s"
+
+      # API 错误率告警
+      - alert: HighAPIErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "API 错误率过高"
+          description: "API 5xx 错误率超过 5%，当前值: {{ $value | humanizePercentage }}"
+
+      # API 请求量异常
+      - alert: LowAPIRequestRate
+        expr: rate(http_requests_total[5m]) < 1
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API 请求量异常低"
+          description: "API 请求量低于正常水平，可能服务不可用"
+
+      # API 请求量过高
+      - alert: HighAPIRequestRate
+        expr: rate(http_requests_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API 请求量过高"
+          description: "API 请求量超过 1000 QPS，当前值: {{ $value }}"
+
+      # 特定端点响应时间告警
+      - alert: SlowEndpoint
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{endpoint!="/metrics"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "端点 {{ $labels.endpoint }} 响应缓慢"
+          description: "端点 P95 响应时间超过 2 秒，当前值: {{ $value }}s"

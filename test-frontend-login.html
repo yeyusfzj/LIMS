@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试前端登录</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>测试前端登录功能</h1>
+    <div>
+        <label>用户名: <input type="text" id="username" value="admin"></label><br><br>
+        <label>密码: <input type="password" id="password" value="Admin@123456"></label><br><br>
+        <button onclick="testLogin()">登录</button>
+    </div>
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '正在登录...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3 style="color: green;">✓ 登录成功！</h3>
+                        <p><strong>用户信息:</strong></p>
+                        <ul>
+                            <li>用户名: ${data.data.user.username}</li>
+                            <li>全名: ${data.data.user.fullName}</li>
+                            <li>邮箱: ${data.data.user.email}</li>
+                            <li>角色: ${data.data.user.roles.join(', ')}</li>
+                        </ul>
+                        <p><strong>Token信息:</strong></p>
+                        <ul>
+                            <li>访问令牌: ${data.data.accessToken.substring(0, 50)}...</li>
+                            <li>过期时间: ${data.data.expiresIn}秒</li>
+                        </ul>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h3 style="color: red;">✗ 登录失败</h3>
+                        <p>状态码: ${response.status}</p>
+                        <p>错误信息: ${data.error?.message || '未知错误'}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3 style="color: red;">✗ 网络错误</h3>
+                    <p>错误: ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

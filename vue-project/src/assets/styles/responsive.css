@@ -1,0 +1,307 @@
+/* 响应式布局样式 */
+
+/* 移动端优化 - 小屏幕 (< 768px) */
+@media (max-width: 767px) {
+  /* 主布局调整 */
+  .main-header {
+    padding: 0 10px !important;
+  }
+
+  .system-name {
+    display: none !important;
+  }
+
+  .header-right {
+    gap: 12px !important;
+  }
+
+  .user-name {
+    display: none !important;
+  }
+
+  /* 内容区域调整 */
+  .main-content {
+    padding: 10px !important;
+  }
+
+  .content-wrapper {
+    padding: 15px !important;
+  }
+
+  .breadcrumb {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* 表格优化 */
+  .el-table {
+    font-size: 12px !important;
+  }
+
+  .el-table th,
+  .el-table td {
+    padding: 8px 5px !important;
+  }
+
+  /* 表单优化 */
+  .el-form-item {
+    margin-bottom: 15px !important;
+  }
+
+  .el-form-item__label {
+    font-size: 13px !important;
+  }
+
+  /* 按钮组优化 */
+  .el-button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .el-button {
+    margin: 0 !important;
+  }
+
+  /* 卡片优化 */
+  .el-card {
+    margin-bottom: 10px !important;
+  }
+
+  .el-card__header {
+    padding: 12px !important;
+  }
+
+  .el-card__body {
+    padding: 12px !important;
+  }
+
+  /* 对话框优化 */
+  .el-dialog {
+    width: 95% !important;
+    margin: 0 auto !important;
+  }
+
+  .el-dialog__header {
+    padding: 15px !important;
+  }
+
+  .el-dialog__body {
+    padding: 15px !important;
+  }
+
+  /* 搜索框优化 */
+  .global-search {
+    width: 150px !important;
+  }
+
+  /* 统计卡片优化 */
+  .metric-card {
+    margin-bottom: 10px;
+  }
+
+  .metric-value {
+    font-size: 20px !important;
+  }
+
+  .metric-title {
+    font-size: 12px !important;
+  }
+
+  /* 快捷入口优化 */
+  .quick-actions {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .action-icon {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .action-title {
+    font-size: 12px !important;
+  }
+
+  /* 待办事项优化 */
+  .todo-item {
+    padding: 10px !important;
+  }
+
+  .todo-title {
+    font-size: 13px !important;
+  }
+
+  .todo-desc {
+    font-size: 11px !important;
+  }
+}
+
+/* 平板优化 - 中等屏幕 (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* 主布局调整 */
+  .main-header {
+    padding: 0 15px !important;
+  }
+
+  .system-name {
+    font-size: 16px !important;
+  }
+
+  /* 内容区域调整 */
+  .main-content {
+    padding: 12px !important;
+  }
+
+  .content-wrapper {
+    padding: 16px !important;
+  }
+
+  /* 表格优化 */
+  .el-table {
+    font-size: 13px !important;
+  }
+
+  /* 卡片优化 */
+  .el-card {
+    margin-bottom: 12px !important;
+  }
+
+  /* 快捷入口优化 */
+  .quick-actions {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* 大屏幕优化 (> 1920px) */
+@media (min-width: 1920px) {
+  .main-container {
+    max-width: 1920px;
+    margin: 0 auto;
+  }
+
+  .content-wrapper {
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  /* 增大可点击区域 */
+  .el-button {
+    min-height: 40px !important;
+    padding: 10px 20px !important;
+  }
+
+  .el-input__inner {
+    min-height: 40px !important;
+  }
+
+  .el-select .el-input__inner {
+    min-height: 40px !important;
+  }
+
+  /* 增大表格行高 */
+  .el-table td,
+  .el-table th {
+    padding: 12px 0 !important;
+  }
+
+  /* 优化滚动 */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 禁用悬停效果 */
+  .el-button:hover,
+  .el-card:hover,
+  .result-item:hover,
+  .todo-item:hover {
+    transform: none !important;
+  }
+}
+
+/* 横屏模式优化 */
+@media (max-width: 767px) and (orientation: landscape) {
+  .main-header {
+    height: 50px !important;
+  }
+
+  .main-container {
+    height: calc(100vh - 50px) !important;
+  }
+
+  .welcome-card {
+    display: none;
+  }
+
+  .metrics-section {
+    margin-bottom: 10px !important;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  /* 隐藏不需要打印的元素 */
+  .main-header,
+  .main-aside,
+  .breadcrumb,
+  .el-button,
+  .el-pagination {
+    display: none !important;
+  }
+
+  /* 优化打印布局 */
+  .main-content {
+    padding: 0 !important;
+  }
+
+  .content-wrapper {
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* 确保内容完整显示 */
+  .el-table,
+  .el-card {
+    page-break-inside: avoid;
+  }
+
+  /* 使用黑白打印 */
+  * {
+    color: #000 !important;
+    background: #fff !important;
+  }
+}
+
+/* 辅助功能优化 */
+@media (prefers-reduced-motion: reduce) {
+  /* 减少动画效果 */
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .el-button {
+    border-width: 2px !important;
+  }
+
+  .el-input__inner {
+    border-width: 2px !important;
+  }
+
+  .el-card {
+    border-width: 2px !important;
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  /* 可以在这里添加暗色模式样式 */
+  /* 目前使用 Element Plus 的默认主题 */
+}

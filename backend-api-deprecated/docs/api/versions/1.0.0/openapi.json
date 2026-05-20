@@ -1,0 +1,3086 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "实验室管理系统后端 API",
+    "version": "1.0.0",
+    "description": "\n实验室管理系统后端 API 是一个 RESTful API 服务，为实验室智能管理系统前端提供数据存储、业务逻辑处理和系统集成能力。\n\n## 核心功能\n\n- **样品管理**：样品全生命周期管理、流转追踪、分样合样\n- **工作流引擎**：灵活的工作流配置、任务自动派工\n- **检测结果**：结果录入、公式计算、批量导入、异常检测\n- **审核判定**：多级审核流程、质量判定、样品放行\n- **报告管理**：报告模板、报告生成、电子签名、分发回收\n- **统计分析**：数据聚合、自定义报表、数据导出\n- **系统管理**：用户管理、角色权限、审计日志、数据备份\n\n## 认证方式\n\nAPI 使用 JWT (JSON Web Token) 进行身份认证。\n\n1. 调用 `POST /api/auth/login` 获取访问令牌\n2. 在后续请求的 Header 中添加：`Authorization: Bearer <token>`\n3. 访问令牌有效期为 15 分钟，可使用刷新令牌延长会话\n\n## 错误响应格式\n\n所有错误响应遵循统一格式：\n\n```json\n{\n  \"error\": {\n    \"code\": \"ERROR_CODE\",\n    \"message\": \"用户友好的错误消息\",\n    \"details\": {},\n    \"timestamp\": \"2024-01-01T00:00:00.000Z\",\n    \"path\": \"/api/samples\",\n    \"requestId\": \"uuid\"\n  }\n}\n```\n\n## 分页响应格式\n\n列表查询接口支持分页，响应格式：\n\n```json\n{\n  \"items\": [],\n  \"total\": 100,\n  \"page\": 1,\n  \"pageSize\": 20,\n  \"totalPages\": 5\n}\n```\n      ",
+    "contact": {
+      "name": "API 支持",
+      "email": "support@lims.example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "x-build-info": {
+      "buildTime": "2026-03-10T02:44:28.444Z",
+      "environment": "local"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "开发环境"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT 访问令牌，格式：Bearer <token>"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "错误码",
+                "example": "VALIDATION_ERROR"
+              },
+              "message": {
+                "type": "string",
+                "description": "错误消息",
+                "example": "请求参数验证失败"
+              },
+              "details": {
+                "type": "object",
+                "description": "详细错误信息"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time",
+                "description": "错误发生时间"
+              },
+              "path": {
+                "type": "string",
+                "description": "请求路径"
+              },
+              "requestId": {
+                "type": "string",
+                "description": "请求追踪 ID"
+              }
+            }
+          }
+        }
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {},
+            "description": "数据列表"
+          },
+          "total": {
+            "type": "integer",
+            "description": "总记录数",
+            "example": 100
+          },
+          "page": {
+            "type": "integer",
+            "description": "当前页码",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "每页记录数",
+            "example": 20
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "总页数",
+            "example": 5
+          }
+        }
+      },
+      "Sample": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "样品 ID"
+          },
+          "barcode": {
+            "type": "string",
+            "description": "样品条码（系统自动生成）",
+            "example": "SAMPLE-20240101-001"
+          },
+          "sampleNumber": {
+            "type": "string",
+            "description": "样品编号（系统自动生成）",
+            "example": "S20240101001"
+          },
+          "clientName": {
+            "type": "string",
+            "description": "客户名称",
+            "example": "测试公司"
+          },
+          "clientContact": {
+            "type": "string",
+            "description": "客户联系方式",
+            "example": "张三 13800138000"
+          },
+          "sampleName": {
+            "type": "string",
+            "description": "样品名称",
+            "example": "饮用水样品"
+          },
+          "sampleType": {
+            "type": "string",
+            "description": "样品类型",
+            "example": "水质"
+          },
+          "sampleCategory": {
+            "type": "string",
+            "description": "样品类别",
+            "example": "环境样品"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "float",
+            "description": "样品数量",
+            "example": 500
+          },
+          "unit": {
+            "type": "string",
+            "description": "数量单位",
+            "example": "mL"
+          },
+          "receivedDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "接收日期"
+          },
+          "samplingDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "采样日期"
+          },
+          "samplingLocation": {
+            "type": "string",
+            "description": "采样地点",
+            "example": "某市自来水厂"
+          },
+          "samplingPerson": {
+            "type": "string",
+            "description": "采样人员",
+            "example": "李四"
+          },
+          "storageLocation": {
+            "type": "string",
+            "description": "存储位置",
+            "example": "冷藏室-A区-01号柜"
+          },
+          "storageCondition": {
+            "type": "string",
+            "description": "存储条件",
+            "example": "4℃冷藏"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "REGISTERED",
+              "IN_TESTING",
+              "TESTING_COMPLETE",
+              "IN_AUDIT",
+              "AUDIT_COMPLETE",
+              "RELEASED",
+              "ARCHIVED"
+            ],
+            "description": "样品状态",
+            "example": "REGISTERED"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "NORMAL",
+              "HIGH",
+              "URGENT"
+            ],
+            "description": "优先级",
+            "example": "NORMAL"
+          },
+          "description": {
+            "type": "string",
+            "description": "样品描述"
+          },
+          "remarks": {
+            "type": "string",
+            "description": "备注信息"
+          },
+          "parentSampleId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "母样品 ID（分样时使用）"
+          },
+          "mergedFromIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "合样来源样品 ID 列表"
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid",
+            "description": "创建人 ID"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          },
+          "releasedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "放行时间"
+          },
+          "releasedBy": {
+            "type": "string",
+            "format": "uuid",
+            "description": "放行人 ID"
+          }
+        }
+      },
+      "CreateSampleRequest": {
+        "type": "object",
+        "required": [
+          "clientName",
+          "sampleName",
+          "sampleType",
+          "sampleCategory",
+          "quantity",
+          "unit",
+          "receivedDate"
+        ],
+        "properties": {
+          "clientName": {
+            "type": "string",
+            "description": "客户名称",
+            "example": "测试公司"
+          },
+          "clientContact": {
+            "type": "string",
+            "description": "客户联系方式",
+            "example": "张三 13800138000"
+          },
+          "sampleName": {
+            "type": "string",
+            "description": "样品名称",
+            "example": "饮用水样品"
+          },
+          "sampleType": {
+            "type": "string",
+            "description": "样品类型",
+            "example": "水质"
+          },
+          "sampleCategory": {
+            "type": "string",
+            "description": "样品类别",
+            "example": "环境样品"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "float",
+            "description": "样品数量",
+            "example": 500
+          },
+          "unit": {
+            "type": "string",
+            "description": "数量单位",
+            "example": "mL"
+          },
+          "receivedDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "接收日期"
+          },
+          "samplingDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "采样日期"
+          },
+          "samplingLocation": {
+            "type": "string",
+            "description": "采样地点"
+          },
+          "samplingPerson": {
+            "type": "string",
+            "description": "采样人员"
+          },
+          "storageLocation": {
+            "type": "string",
+            "description": "存储位置"
+          },
+          "storageCondition": {
+            "type": "string",
+            "description": "存储条件"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "NORMAL",
+              "HIGH",
+              "URGENT"
+            ],
+            "description": "优先级",
+            "default": "NORMAL"
+          },
+          "description": {
+            "type": "string",
+            "description": "样品描述"
+          },
+          "remarks": {
+            "type": "string",
+            "description": "备注信息"
+          }
+        }
+      },
+      "Transfer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "流转记录 ID"
+          },
+          "sampleId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "样品 ID"
+          },
+          "fromLocation": {
+            "type": "string",
+            "description": "起始位置",
+            "example": "接收室"
+          },
+          "toLocation": {
+            "type": "string",
+            "description": "目标位置",
+            "example": "检测室-A"
+          },
+          "fromPerson": {
+            "type": "string",
+            "description": "交接人",
+            "example": "张三"
+          },
+          "toPerson": {
+            "type": "string",
+            "description": "接收人",
+            "example": "李四"
+          },
+          "transferDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "流转日期"
+          },
+          "receivedDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "接收确认日期"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "IN_TRANSIT",
+              "RECEIVED",
+              "REJECTED"
+            ],
+            "description": "流转状态"
+          },
+          "remarks": {
+            "type": "string",
+            "description": "备注"
+          },
+          "senderConfirmed": {
+            "type": "boolean",
+            "description": "发送方是否已确认"
+          },
+          "receiverConfirmed": {
+            "type": "boolean",
+            "description": "接收方是否已确认"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "用户 ID"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "邮箱"
+          },
+          "fullName": {
+            "type": "string",
+            "description": "姓名"
+          },
+          "department": {
+            "type": "string",
+            "description": "部门"
+          },
+          "position": {
+            "type": "string",
+            "description": "职位"
+          },
+          "phone": {
+            "type": "string",
+            "description": "电话"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "LOCKED"
+            ],
+            "description": "用户状态"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Result": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "结果 ID"
+          },
+          "sampleId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "样品 ID"
+          },
+          "testItemId": {
+            "type": "string",
+            "description": "检测项目 ID"
+          },
+          "parameter": {
+            "type": "string",
+            "description": "检测参数名称",
+            "example": "pH值"
+          },
+          "value": {
+            "type": "number",
+            "format": "float",
+            "description": "数值型结果",
+            "example": 7.2
+          },
+          "textValue": {
+            "type": "string",
+            "description": "文本型结果"
+          },
+          "unit": {
+            "type": "string",
+            "description": "单位",
+            "example": "pH"
+          },
+          "method": {
+            "type": "string",
+            "description": "检测方法",
+            "example": "GB/T 5750.4-2006"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "INSTRUMENT",
+              "CALCULATED"
+            ],
+            "description": "结果来源"
+          },
+          "isAbnormal": {
+            "type": "boolean",
+            "description": "是否异常"
+          },
+          "abnormalReason": {
+            "type": "string",
+            "description": "异常原因"
+          },
+          "isRetest": {
+            "type": "boolean",
+            "description": "是否为复测结果"
+          },
+          "enteredBy": {
+            "type": "string",
+            "format": "uuid",
+            "description": "录入人 ID"
+          },
+          "enteredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "录入时间"
+          }
+        }
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "报告 ID"
+          },
+          "reportNumber": {
+            "type": "string",
+            "description": "报告编号",
+            "example": "RPT-20240101-001"
+          },
+          "sampleId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "样品 ID"
+          },
+          "templateId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "模板 ID"
+          },
+          "content": {
+            "type": "string",
+            "description": "报告内容（HTML）"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PENDING_SIGNATURE",
+              "SIGNED",
+              "DISTRIBUTED",
+              "RECALLED"
+            ],
+            "description": "报告状态"
+          },
+          "generatedBy": {
+            "type": "string",
+            "format": "uuid",
+            "description": "生成人 ID"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "生成时间"
+          },
+          "approvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "批准时间"
+          }
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "未认证或令牌无效",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "AUTH_FAILED",
+                "message": "认证失败，请重新登录",
+                "details": {
+                  "reason": "令牌已过期"
+                },
+                "timestamp": "2024-01-01T00:00:00.000Z",
+                "path": "/api/samples",
+                "requestId": "uuid"
+              }
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "无权限访问",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "PERMISSION_DENIED",
+                "message": "您没有权限执行此操作",
+                "details": {
+                  "required": "sample:update",
+                  "current": [
+                    "sample:read"
+                  ]
+                },
+                "timestamp": "2024-01-01T00:00:00.000Z",
+                "path": "/api/samples/123",
+                "requestId": "uuid"
+              }
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "资源不存在",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "NOT_FOUND",
+                "message": "请求的资源不存在",
+                "timestamp": "2024-01-01T00:00:00.000Z",
+                "path": "/api/samples/123",
+                "requestId": "uuid"
+              }
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "请求参数验证失败",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "请求参数验证失败",
+                "details": {
+                  "fields": [
+                    {
+                      "field": "email",
+                      "message": "邮箱格式不正确"
+                    },
+                    {
+                      "field": "quantity",
+                      "message": "数量必须大于 0"
+                    }
+                  ]
+                },
+                "timestamp": "2024-01-01T00:00:00.000Z",
+                "path": "/api/samples",
+                "requestId": "uuid"
+              }
+            }
+          }
+        }
+      },
+      "ConflictError": {
+        "description": "并发冲突或业务规则冲突",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "CONFLICT",
+                "message": "资源已被其他用户修改",
+                "details": {
+                  "currentVersion": 5,
+                  "requestedVersion": 4
+                },
+                "timestamp": "2024-01-01T00:00:00.000Z",
+                "path": "/api/samples/123",
+                "requestId": "uuid"
+              }
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "服务器内部错误",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "服务器内部错误，请稍后重试",
+                "timestamp": "2024-01-01T00:00:00.000Z",
+                "path": "/api/samples",
+                "requestId": "uuid"
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "PageParam": {
+        "name": "page",
+        "in": "query",
+        "description": "页码（从 1 开始）",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "PageSizeParam": {
+        "name": "pageSize",
+        "in": "query",
+        "description": "每页记录数",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "SortParam": {
+        "name": "sort",
+        "in": "query",
+        "description": "排序字段（格式：field:asc 或 field:desc）",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "example": "createdAt:desc"
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "认证",
+      "description": "用户认证和授权相关接口"
+    },
+    {
+      "name": "样品管理",
+      "description": "样品创建、查询、更新、流转、分样、合样等操作"
+    },
+    {
+      "name": "工作流",
+      "description": "工作流配置、实例管理、节点控制"
+    },
+    {
+      "name": "任务管理",
+      "description": "任务创建、分配、查询、完成"
+    },
+    {
+      "name": "检测结果",
+      "description": "结果录入、批量导入、公式计算、复测管理"
+    },
+    {
+      "name": "审核判定",
+      "description": "多级审核、质量判定、样品放行"
+    },
+    {
+      "name": "报告管理",
+      "description": "报告模板、报告生成、电子签名、分发回收"
+    },
+    {
+      "name": "统计分析",
+      "description": "数据统计、自定义报表、数据导出"
+    },
+    {
+      "name": "系统管理",
+      "description": "用户管理、角色权限、审计日志、数据备份"
+    },
+    {
+      "name": "权限管理",
+      "description": "权限配置、数据权限过滤"
+    }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "summary": "用户登录",
+        "description": "使用用户名和密码进行身份认证，成功后返回访问令牌和刷新令牌",
+        "tags": [
+          "认证"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "用户名",
+                    "example": "admin"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "description": "密码",
+                    "example": "Admin@123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string",
+                          "description": "访问令牌（有效期 15 分钟）"
+                        },
+                        "refreshToken": {
+                          "type": "string",
+                          "description": "刷新令牌（有效期 7 天）"
+                        },
+                        "expiresIn": {
+                          "type": "integer",
+                          "description": "访问令牌过期时间（秒）",
+                          "example": 900
+                        },
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "username": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "fullName": {
+                              "type": "string"
+                            },
+                            "roles": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "description": "认证失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "AUTH_FAILED"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "用户名或密码错误"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求过于频繁",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "RATE_LIMIT_EXCEEDED"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "登录尝试次数过多，请稍后再试"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "summary": "刷新访问令牌",
+        "description": "使用刷新令牌获取新的访问令牌，延长会话时间",
+        "tags": [
+          "认证"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refreshToken"
+                ],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "description": "刷新令牌",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "令牌刷新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string",
+                          "description": "新的访问令牌"
+                        },
+                        "refreshToken": {
+                          "type": "string",
+                          "description": "新的刷新令牌"
+                        },
+                        "expiresIn": {
+                          "type": "integer",
+                          "description": "访问令牌过期时间（秒）",
+                          "example": 900
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "description": "刷新令牌无效或已过期",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "TOKEN_REFRESH_FAILED"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "刷新令牌无效或已过期"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "用户登出",
+        "description": "撤销当前访问令牌，用户需要重新登录",
+        "tags": [
+          "认证"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "登出成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "登出成功"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "获取当前用户信息",
+        "description": "获取当前已认证用户的详细信息，包括角色和权限",
+        "tags": [
+          "认证"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "用户 ID"
+                        },
+                        "username": {
+                          "type": "string",
+                          "description": "用户名"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "description": "邮箱"
+                        },
+                        "fullName": {
+                          "type": "string",
+                          "description": "姓名"
+                        },
+                        "department": {
+                          "type": "string",
+                          "description": "部门"
+                        },
+                        "position": {
+                          "type": "string",
+                          "description": "职位"
+                        },
+                        "phone": {
+                          "type": "string",
+                          "description": "电话"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "INACTIVE",
+                            "LOCKED"
+                          ],
+                          "description": "用户状态"
+                        },
+                        "roles": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "用户角色列表"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/reports": {
+      "post": {
+        "summary": "生成报告",
+        "description": "根据样品数据和报告模板生成检测报告，分配唯一报告编号",
+        "tags": [
+          "报告管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sampleId",
+                  "templateId"
+                ],
+                "properties": {
+                  "sampleId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "样品 ID"
+                  },
+                  "templateId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "报告模板 ID"
+                  },
+                  "preview": {
+                    "type": "boolean",
+                    "description": "是否为预览模式（预览模式不创建正式报告）",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "报告生成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "报告生成成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Report"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "get": {
+        "summary": "查询报告列表",
+        "description": "分页查询报告列表，支持多条件过滤",
+        "tags": [
+          "报告管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/PageSizeParam"
+          },
+          {
+            "name": "reportNumber",
+            "in": "query",
+            "description": "报告编号",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sampleId",
+            "in": "query",
+            "description": "样品 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "报告状态",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PENDING_SIGNATURE",
+                "SIGNED",
+                "DISTRIBUTED",
+                "RECALLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/reports/{id}/preview": {
+      "get": {
+        "summary": "预览报告",
+        "description": "获取报告的 HTML 内容用于预览",
+        "tags": [
+          "报告管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "报告 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "预览成功",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string",
+                  "description": "报告 HTML 内容"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/reports/{id}": {
+      "get": {
+        "summary": "获取报告详情",
+        "description": "获取指定报告的详细信息",
+        "tags": [
+          "报告管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "报告 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Report"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/reports/{id}/sign": {
+      "post": {
+        "summary": "签名报告",
+        "description": "对报告进行电子签名，验证签名人身份和权限",
+        "tags": [
+          "报告管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "报告 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "signerRole",
+                  "password"
+                ],
+                "properties": {
+                  "signerRole": {
+                    "type": "string",
+                    "description": "签名角色",
+                    "example": "审核人"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "description": "签名密码（用于身份验证）"
+                  },
+                  "comments": {
+                    "type": "string",
+                    "description": "签名意见"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "签名成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "签名成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "reportId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "signerName": {
+                          "type": "string"
+                        },
+                        "signerRole": {
+                          "type": "string"
+                        },
+                        "signedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/reports/{id}/distribute": {
+      "post": {
+        "summary": "分发报告",
+        "description": "通过邮件或其他方式分发报告给客户",
+        "tags": [
+          "报告管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "报告 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "method",
+                  "recipient"
+                ],
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "EMAIL",
+                      "DOWNLOAD",
+                      "PRINT"
+                    ],
+                    "description": "分发方式"
+                  },
+                  "recipient": {
+                    "type": "string",
+                    "description": "接收人",
+                    "example": "张三"
+                  },
+                  "recipientEmail": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "接收人邮箱（邮件分发时必填）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "分发成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "报告分发成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "reportId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "method": {
+                          "type": "string"
+                        },
+                        "recipient": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "sentAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/reports/{id}/recall": {
+      "post": {
+        "summary": "回收报告",
+        "description": "回收已分发的报告，更新报告状态并记录回收原因",
+        "tags": [
+          "报告管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "报告 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "回收原因",
+                    "example": "数据错误，需要重新出具报告"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "回收成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "报告回收成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Report"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/results": {
+      "post": {
+        "summary": "创建检测结果",
+        "description": "录入单个检测结果，记录来源和时间戳",
+        "tags": [
+          "检测结果"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sampleId",
+                  "testItemId",
+                  "parameter",
+                  "method"
+                ],
+                "properties": {
+                  "sampleId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "样品 ID"
+                  },
+                  "testItemId": {
+                    "type": "string",
+                    "description": "检测项目 ID"
+                  },
+                  "parameter": {
+                    "type": "string",
+                    "description": "检测参数名称",
+                    "example": "pH值"
+                  },
+                  "value": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "数值型结果",
+                    "example": 7.2
+                  },
+                  "textValue": {
+                    "type": "string",
+                    "description": "文本型结果"
+                  },
+                  "unit": {
+                    "type": "string",
+                    "description": "单位",
+                    "example": "pH"
+                  },
+                  "method": {
+                    "type": "string",
+                    "description": "检测方法",
+                    "example": "GB/T 5750.4-2006"
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "MANUAL",
+                      "INSTRUMENT",
+                      "CALCULATED"
+                    ],
+                    "description": "结果来源",
+                    "default": "MANUAL"
+                  },
+                  "instrumentId": {
+                    "type": "string",
+                    "description": "仪器 ID（仪器导入时使用）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "结果创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "结果创建成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Result"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "get": {
+        "summary": "查询检测结果列表",
+        "description": "分页查询检测结果，支持多条件过滤",
+        "tags": [
+          "检测结果"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/PageSizeParam"
+          },
+          {
+            "name": "sampleId",
+            "in": "query",
+            "description": "样品 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "parameter",
+            "in": "query",
+            "description": "检测参数名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "description": "结果来源",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MANUAL",
+                "INSTRUMENT",
+                "CALCULATED"
+              ]
+            }
+          },
+          {
+            "name": "isAbnormal",
+            "in": "query",
+            "description": "是否异常",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/results/import": {
+      "post": {
+        "summary": "批量导入检测结果",
+        "description": "从文件（CSV、Excel、XML）批量导入检测结果，支持数据验证和错误报告",
+        "tags": [
+          "检测结果"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "结果数据文件（支持 CSV、Excel、XML 格式）"
+                  },
+                  "sampleId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "样品 ID（可选，如果文件中不包含）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "导入成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "导入成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "description": "总记录数",
+                          "example": 100
+                        },
+                        "success": {
+                          "type": "integer",
+                          "description": "成功导入数",
+                          "example": 95
+                        },
+                        "failed": {
+                          "type": "integer",
+                          "description": "失败数",
+                          "example": 5
+                        },
+                        "errors": {
+                          "type": "array",
+                          "description": "错误详情",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "row": {
+                                "type": "integer",
+                                "description": "行号"
+                              },
+                              "error": {
+                                "type": "string",
+                                "description": "错误信息"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/results/{id}": {
+      "get": {
+        "summary": "获取检测结果详情",
+        "description": "获取指定检测结果的详细信息",
+        "tags": [
+          "检测结果"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "结果 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Result"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/results/{id}/calculate": {
+      "post": {
+        "summary": "执行公式计算",
+        "description": "根据配置的公式自动计算衍生结果",
+        "tags": [
+          "检测结果"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "结果 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "计算成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "计算成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Result"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "计算失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "CALCULATION_FAILED"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "公式计算失败"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/results/{id}/retest": {
+      "post": {
+        "summary": "申请复测",
+        "description": "对异常结果申请复测，创建新的检测任务",
+        "tags": [
+          "检测结果"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "结果 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "复测原因",
+                    "example": "结果异常，需要复测确认"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "复测申请成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "复测申请成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "新创建的检测任务 ID"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/samples": {
+      "post": {
+        "summary": "创建样品",
+        "description": "创建新的样品记录，系统自动生成唯一条码和样品编号",
+        "tags": [
+          "样品管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSampleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "样品创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "样品创建成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Sample"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "get": {
+        "summary": "查询样品列表",
+        "description": "分页查询样品列表，支持多条件过滤、字段选择和排序",
+        "tags": [
+          "样品管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/PageSizeParam"
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "需要返回的字段列表（逗号分隔），不指定则返回所有字段",
+            "schema": {
+              "type": "string",
+              "example": "id,barcode,sampleName,status"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "type": "string",
+              "default": "createdAt",
+              "example": "createdAt"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "barcode",
+            "in": "query",
+            "description": "样品条码（模糊匹配）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sampleNumber",
+            "in": "query",
+            "description": "样品编号（模糊匹配）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clientName",
+            "in": "query",
+            "description": "客户名称（模糊匹配）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sampleType",
+            "in": "query",
+            "description": "样品类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "样品状态",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "REGISTERED",
+                "IN_TESTING",
+                "TESTING_COMPLETE",
+                "IN_AUDIT",
+                "AUDIT_COMPLETE",
+                "RELEASED",
+                "ARCHIVED"
+              ]
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "description": "优先级",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "LOW",
+                "NORMAL",
+                "HIGH",
+                "URGENT"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Sample"
+                          }
+                        },
+                        "total": {
+                          "type": "integer",
+                          "description": "总记录数"
+                        },
+                        "page": {
+                          "type": "integer",
+                          "description": "当前页码"
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "description": "每页记录数"
+                        },
+                        "totalPages": {
+                          "type": "integer",
+                          "description": "总页数"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/samples/{id}": {
+      "get": {
+        "summary": "获取样品详情",
+        "description": "获取指定样品的详细信息，支持字段选择",
+        "tags": [
+          "样品管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "样品 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "需要返回的字段列表（逗号分隔），不指定则返回所有字段",
+            "schema": {
+              "type": "string",
+              "example": "id,barcode,sampleName,status,createdAt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Sample"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/samples/{id}/transfer": {
+      "post": {
+        "summary": "样品流转",
+        "description": "创建样品流转记录，更新样品当前位置，支持双方确认机制",
+        "tags": [
+          "样品管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "样品 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "fromLocation",
+                  "toLocation",
+                  "fromPerson",
+                  "toPerson"
+                ],
+                "properties": {
+                  "fromLocation": {
+                    "type": "string",
+                    "description": "起始位置",
+                    "example": "接收室"
+                  },
+                  "toLocation": {
+                    "type": "string",
+                    "description": "目标位置",
+                    "example": "检测室-A"
+                  },
+                  "fromPerson": {
+                    "type": "string",
+                    "description": "交接人",
+                    "example": "张三"
+                  },
+                  "toPerson": {
+                    "type": "string",
+                    "description": "接收人",
+                    "example": "李四"
+                  },
+                  "remarks": {
+                    "type": "string",
+                    "description": "备注信息"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "流转成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "样品流转成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Transfer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/samples/{id}/custody": {
+      "get": {
+        "summary": "获取样品监管链",
+        "description": "获取样品完整的流转历史记录，按时间顺序排列",
+        "tags": [
+          "样品管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "样品 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Transfer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/samples/{id}/split": {
+      "post": {
+        "summary": "分样操作",
+        "description": "从母样品创建多个子样品，建立母子关联关系，操作在事务中执行",
+        "tags": [
+          "样品管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "母样品 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "childSamples"
+                ],
+                "properties": {
+                  "childSamples": {
+                    "type": "array",
+                    "description": "子样品信息列表",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "sampleName",
+                        "quantity",
+                        "unit"
+                      ],
+                      "properties": {
+                        "sampleName": {
+                          "type": "string",
+                          "description": "子样品名称",
+                          "example": "水样-1"
+                        },
+                        "quantity": {
+                          "type": "number",
+                          "description": "数量",
+                          "example": 100
+                        },
+                        "unit": {
+                          "type": "string",
+                          "description": "单位",
+                          "example": "mL"
+                        },
+                        "storageLocation": {
+                          "type": "string",
+                          "description": "存储位置"
+                        },
+                        "remarks": {
+                          "type": "string",
+                          "description": "备注"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "分样成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "分样成功"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Sample"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/samples/merge": {
+      "post": {
+        "summary": "合样操作",
+        "description": "将多个样品合并为一个新样品，记录来源样品信息，操作在事务中执行",
+        "tags": [
+          "样品管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sourceSampleIds",
+                  "mergedSample"
+                ],
+                "properties": {
+                  "sourceSampleIds": {
+                    "type": "array",
+                    "description": "来源样品 ID 列表",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "example": [
+                      "uuid1",
+                      "uuid2",
+                      "uuid3"
+                    ]
+                  },
+                  "mergedSample": {
+                    "type": "object",
+                    "description": "合并后的样品信息",
+                    "required": [
+                      "sampleName",
+                      "quantity",
+                      "unit"
+                    ],
+                    "properties": {
+                      "sampleName": {
+                        "type": "string",
+                        "description": "合并样品名称",
+                        "example": "混合水样"
+                      },
+                      "quantity": {
+                        "type": "number",
+                        "description": "数量",
+                        "example": 500
+                      },
+                      "unit": {
+                        "type": "string",
+                        "description": "单位",
+                        "example": "mL"
+                      },
+                      "storageLocation": {
+                        "type": "string",
+                        "description": "存储位置"
+                      },
+                      "remarks": {
+                        "type": "string",
+                        "description": "备注"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "合样成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "合样成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Sample"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/samples/{id}/release": {
+      "post": {
+        "summary": "样品放行",
+        "description": "验证样品放行条件（审核完成、判定合格等），更新样品状态为已放行",
+        "tags": [
+          "样品管理"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "样品 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "放行成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "样品放行成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Sample"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "放行条件不满足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "RELEASE_CONDITIONS_NOT_MET"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "样品放行条件不满足"
+                        },
+                        "details": {
+                          "type": "object",
+                          "properties": {
+                            "violations": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "example": [
+                                "审核未完成",
+                                "质量判定未通过"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    }
+  }
+}

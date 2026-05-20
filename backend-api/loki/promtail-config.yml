@@ -1,0 +1,171 @@
+# Promtail 配置文件
+# 用于收集日志并发送到 Loki
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+# Loki 客户端配置
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    batchwait: 1s
+    batchsize: 1048576  # 1MB
+    
+    # 外部标签
+    external_labels:
+      cluster: 'laboratory-system'
+      environment: 'production'
+    
+    # 重试配置
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+# 位置配置（记录读取位置）
+positions:
+  filename: /tmp/positions.yaml
+
+# 抓取配置
+scrape_configs:
+  # FastAPI 应用日志
+  - job_name: fastapi-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: fastapi-backend
+          app: laboratory-system
+          __path__: /app/logs/*.log
+    
+    # 日志解析管道
+    pipeline_stages:
+      # 1. JSON 解析
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            logger: logger
+            message: message
+            module: module
+            function: function
+            line: line
+            request_id: request_id
+            user_id: user_id
+      
+      # 2. 提取标签
+      - labels:
+          level:
+          logger:
+          module:
+      
+      # 3. 时间戳解析
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      
+      # 4. 输出格式化
+      - output:
+          source: message
+
+  # Nginx 访问日志
+  - job_name: nginx-access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          log_type: access
+          __path__: /var/log/nginx/access.log
+    
+    pipeline_stages:
+      # Nginx 日志格式解析
+      - regex:
+          expression: '^(?P<remote_addr>[\w\.]+) - (?P<remote_user>[\w-]+) \[(?P<time_local>.*)\] "(?P<method>\w+) (?P<request>.*) (?P<protocol>[\w/\.]+)" (?P<status>\d+) (?P<body_bytes_sent>\d+) "(?P<http_referer>.*)" "(?P<http_user_agent>.*)"'
+      
+      - labels:
+          method:
+          status:
+      
+      - timestamp:
+          source: time_local
+          format: '02/Jan/2006:15:04:05 -0700'
+
+  # Nginx 错误日志
+  - job_name: nginx-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          log_type: error
+          __path__: /var/log/nginx/error.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>\w+)\] (?P<message>.*)'
+      
+      - labels:
+          level:
+      
+      - timestamp:
+          source: timestamp
+          format: '2006/01/02 15:04:05'
+
+  # PostgreSQL 日志
+  - job_name: postgres-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: postgres
+          __path__: /var/lib/postgresql/data/log/*.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \w+) \[(?P<pid>\d+)\] (?P<level>\w+):  (?P<message>.*)'
+      
+      - labels:
+          level:
+      
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05.000 MST'
+
+  # Redis 日志
+  - job_name: redis-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: redis
+          __path__: /var/log/redis/*.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<pid>\d+):(?P<role>\w+) (?P<timestamp>\d{2} \w{3} \d{4} \d{2}:\d{2}:\d{2}\.\d{3}) (?P<level>.) (?P<message>.*)'
+      
+      - labels:
+          level:
+      
+      - timestamp:
+          source: timestamp
+          format: '02 Jan 2006 15:04:05.000'
+
+  # 系统日志
+  - job_name: syslog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          __path__: /var/log/syslog
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\w{3} \d{2} \d{2}:\d{2}:\d{2}) (?P<hostname>[\w-]+) (?P<process>[\w-]+)(\[(?P<pid>\d+)\])?: (?P<message>.*)'
+      
+      - timestamp:
+          source: timestamp
+          format: 'Jan 02 15:04:05'

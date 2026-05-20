@@ -1,0 +1,869 @@
+{
+  "timestamp": "2026-04-18T17:22:55.503473",
+  "overall_status": "PASS",
+  "checks": {
+    "schema_consistency": {
+      "status": "PASS",
+      "total_tables": 27,
+      "matched_tables": 27,
+      "partially_matched_tables": 0,
+      "missing_tables": [],
+      "details": {
+        "archived_audit_logs": {
+          "status": "matched",
+          "column_count": 11,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "audit_comment_templates": {
+          "status": "matched",
+          "column_count": 9,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "audit_history": {
+          "status": "matched",
+          "column_count": 6,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "audit_logs": {
+          "status": "matched",
+          "column_count": 10,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "audit_tasks": {
+          "status": "matched",
+          "column_count": 9,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "audit_workflow_configs": {
+          "status": "matched",
+          "column_count": 9,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "backup_records": {
+          "status": "matched",
+          "column_count": 12,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "distributions": {
+          "status": "matched",
+          "column_count": 8,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "formulas": {
+          "status": "matched",
+          "column_count": 9,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "judgment_history": {
+          "status": "matched",
+          "column_count": 8,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "judgment_rules": {
+          "status": "matched",
+          "column_count": 10,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "permissions": {
+          "status": "matched",
+          "column_count": 4,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "quality_judgments": {
+          "status": "matched",
+          "column_count": 10,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "report_templates": {
+          "status": "matched",
+          "column_count": 11,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "reports": {
+          "status": "matched",
+          "column_count": 12,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "results": {
+          "status": "matched",
+          "column_count": 22,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "roles": {
+          "status": "matched",
+          "column_count": 5,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "samples": {
+          "status": "matched",
+          "column_count": 29,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "signatures": {
+          "status": "matched",
+          "column_count": 7,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "tasks": {
+          "status": "matched",
+          "column_count": 13,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "test_items": {
+          "status": "matched",
+          "column_count": 11,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "test_methods": {
+          "status": "matched",
+          "column_count": 20,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "transfers": {
+          "status": "matched",
+          "column_count": 13,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "user_roles": {
+          "status": "matched",
+          "column_count": 3,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "users": {
+          "status": "matched",
+          "column_count": 12,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "workflow_instances": {
+          "status": "matched",
+          "column_count": 8,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        },
+        "workflows": {
+          "status": "matched",
+          "column_count": 11,
+          "missing_in_sa": [],
+          "missing_in_db": []
+        }
+      }
+    },
+    "indexes": {
+      "status": "PASS",
+      "total_indexes": 69,
+      "tables_with_indexes": {
+        "archived_audit_logs": {
+          "total": 5,
+          "non_primary": 4,
+          "indexes": [
+            {
+              "name": "archived_audit_logs_archivedAt_idx",
+              "columns": [
+                "archivedAt"
+              ],
+              "unique": false
+            },
+            {
+              "name": "archived_audit_logs_resource_resourceId_idx",
+              "columns": [
+                "resourceId",
+                "resource"
+              ],
+              "unique": false
+            },
+            {
+              "name": "archived_audit_logs_timestamp_idx",
+              "columns": [
+                "timestamp"
+              ],
+              "unique": false
+            },
+            {
+              "name": "archived_audit_logs_userId_idx",
+              "columns": [
+                "userId"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "audit_comment_templates": {
+          "total": 5,
+          "non_primary": 4,
+          "indexes": [
+            {
+              "name": "audit_comment_templates_createdBy_idx",
+              "columns": [
+                "createdBy"
+              ],
+              "unique": false
+            },
+            {
+              "name": "audit_comment_templates_isDefault_idx",
+              "columns": [
+                "isDefault"
+              ],
+              "unique": false
+            },
+            {
+              "name": "audit_comment_templates_name_key",
+              "columns": [
+                "name"
+              ],
+              "unique": true
+            },
+            {
+              "name": "audit_comment_templates_type_idx",
+              "columns": [
+                "type"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "audit_history": {
+          "total": 4,
+          "non_primary": 3,
+          "indexes": [
+            {
+              "name": "audit_history_performedAt_idx",
+              "columns": [
+                "performedAt"
+              ],
+              "unique": false
+            },
+            {
+              "name": "audit_history_performedBy_idx",
+              "columns": [
+                "performedBy"
+              ],
+              "unique": false
+            },
+            {
+              "name": "audit_history_taskId_idx",
+              "columns": [
+                "taskId"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "audit_logs": {
+          "total": 4,
+          "non_primary": 3,
+          "indexes": [
+            {
+              "name": "audit_logs_resource_resourceId_idx",
+              "columns": [
+                "resource",
+                "resourceId"
+              ],
+              "unique": false
+            },
+            {
+              "name": "audit_logs_timestamp_idx",
+              "columns": [
+                "timestamp"
+              ],
+              "unique": false
+            },
+            {
+              "name": "audit_logs_userId_idx",
+              "columns": [
+                "userId"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "audit_tasks": {
+          "total": 4,
+          "non_primary": 3,
+          "indexes": [
+            {
+              "name": "audit_tasks_auditorId_idx",
+              "columns": [
+                "auditorId"
+              ],
+              "unique": false
+            },
+            {
+              "name": "audit_tasks_sampleId_idx",
+              "columns": [
+                "sampleId"
+              ],
+              "unique": false
+            },
+            {
+              "name": "audit_tasks_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "audit_workflow_configs": {
+          "total": 4,
+          "non_primary": 3,
+          "indexes": [
+            {
+              "name": "audit_workflow_configs_createdBy_idx",
+              "columns": [
+                "createdBy"
+              ],
+              "unique": false
+            },
+            {
+              "name": "audit_workflow_configs_name_key",
+              "columns": [
+                "name"
+              ],
+              "unique": true
+            },
+            {
+              "name": "audit_workflow_configs_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "backup_records": {
+          "total": 4,
+          "non_primary": 3,
+          "indexes": [
+            {
+              "name": "backup_records_createdAt_idx",
+              "columns": [
+                "createdAt"
+              ],
+              "unique": false
+            },
+            {
+              "name": "backup_records_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            },
+            {
+              "name": "backup_records_type_idx",
+              "columns": [
+                "type"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "distributions": {
+          "total": 2,
+          "non_primary": 1,
+          "indexes": [
+            {
+              "name": "distributions_reportId_idx",
+              "columns": [
+                "reportId"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "formulas": {
+          "total": 1,
+          "non_primary": 0,
+          "indexes": []
+        },
+        "judgment_history": {
+          "total": 4,
+          "non_primary": 3,
+          "indexes": [
+            {
+              "name": "judgment_history_changedAt_idx",
+              "columns": [
+                "changedAt"
+              ],
+              "unique": false
+            },
+            {
+              "name": "judgment_history_judgmentId_idx",
+              "columns": [
+                "judgmentId"
+              ],
+              "unique": false
+            },
+            {
+              "name": "judgment_history_sampleId_idx",
+              "columns": [
+                "sampleId"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "judgment_rules": {
+          "total": 3,
+          "non_primary": 2,
+          "indexes": [
+            {
+              "name": "judgment_rules_isActive_idx",
+              "columns": [
+                "isActive"
+              ],
+              "unique": false
+            },
+            {
+              "name": "judgment_rules_testItemType_idx",
+              "columns": [
+                "testItemType"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "permissions": {
+          "total": 2,
+          "non_primary": 1,
+          "indexes": [
+            {
+              "name": "permissions_resource_action_key",
+              "columns": [
+                "resource",
+                "action"
+              ],
+              "unique": true
+            }
+          ]
+        },
+        "quality_judgments": {
+          "total": 3,
+          "non_primary": 2,
+          "indexes": [
+            {
+              "name": "quality_judgments_result_idx",
+              "columns": [
+                "result"
+              ],
+              "unique": false
+            },
+            {
+              "name": "quality_judgments_sampleId_key",
+              "columns": [
+                "sampleId"
+              ],
+              "unique": true
+            }
+          ]
+        },
+        "report_templates": {
+          "total": 1,
+          "non_primary": 0,
+          "indexes": []
+        },
+        "reports": {
+          "total": 5,
+          "non_primary": 4,
+          "indexes": [
+            {
+              "name": "reports_reportNumber_idx",
+              "columns": [
+                "reportNumber"
+              ],
+              "unique": false
+            },
+            {
+              "name": "reports_reportNumber_key",
+              "columns": [
+                "reportNumber"
+              ],
+              "unique": true
+            },
+            {
+              "name": "reports_sampleId_idx",
+              "columns": [
+                "sampleId"
+              ],
+              "unique": false
+            },
+            {
+              "name": "reports_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "results": {
+          "total": 5,
+          "non_primary": 4,
+          "indexes": [
+            {
+              "name": "idx_results_abnormal",
+              "columns": [
+                "isAbnormal"
+              ],
+              "unique": false
+            },
+            {
+              "name": "idx_results_retest",
+              "columns": [
+                "originalResultId",
+                "isRetest"
+              ],
+              "unique": false
+            },
+            {
+              "name": "results_sampleId_idx",
+              "columns": [
+                "sampleId"
+              ],
+              "unique": false
+            },
+            {
+              "name": "results_testItemId_idx",
+              "columns": [
+                "testItemId"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "roles": {
+          "total": 2,
+          "non_primary": 1,
+          "indexes": [
+            {
+              "name": "roles_name_key",
+              "columns": [
+                "name"
+              ],
+              "unique": true
+            }
+          ]
+        },
+        "samples": {
+          "total": 8,
+          "non_primary": 7,
+          "indexes": [
+            {
+              "name": "samples_barcode_idx",
+              "columns": [
+                "barcode"
+              ],
+              "unique": false
+            },
+            {
+              "name": "samples_barcode_key",
+              "columns": [
+                "barcode"
+              ],
+              "unique": true
+            },
+            {
+              "name": "samples_clientName_idx",
+              "columns": [
+                "clientName"
+              ],
+              "unique": false
+            },
+            {
+              "name": "samples_sampleNumber_idx",
+              "columns": [
+                "sampleNumber"
+              ],
+              "unique": false
+            },
+            {
+              "name": "samples_sampleNumber_key",
+              "columns": [
+                "sampleNumber"
+              ],
+              "unique": true
+            },
+            {
+              "name": "samples_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            },
+            {
+              "name": "samples_workflowInstanceId_key",
+              "columns": [
+                "workflowInstanceId"
+              ],
+              "unique": true
+            }
+          ]
+        },
+        "signatures": {
+          "total": 2,
+          "non_primary": 1,
+          "indexes": [
+            {
+              "name": "signatures_reportId_idx",
+              "columns": [
+                "reportId"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "tasks": {
+          "total": 5,
+          "non_primary": 4,
+          "indexes": [
+            {
+              "name": "idx_tasks_assigned_status",
+              "columns": [
+                "status",
+                "assignedTo"
+              ],
+              "unique": false
+            },
+            {
+              "name": "tasks_assignedTo_idx",
+              "columns": [
+                "assignedTo"
+              ],
+              "unique": false
+            },
+            {
+              "name": "tasks_instanceId_idx",
+              "columns": [
+                "instanceId"
+              ],
+              "unique": false
+            },
+            {
+              "name": "tasks_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "test_items": {
+          "total": 4,
+          "non_primary": 3,
+          "indexes": [
+            {
+              "name": "idx_test_items_assigned_status",
+              "columns": [
+                "status",
+                "assignedTo"
+              ],
+              "unique": false
+            },
+            {
+              "name": "test_items_sampleId_idx",
+              "columns": [
+                "sampleId"
+              ],
+              "unique": false
+            },
+            {
+              "name": "test_items_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "test_methods": {
+          "total": 5,
+          "non_primary": 4,
+          "indexes": [
+            {
+              "name": "test_methods_category_idx",
+              "columns": [
+                "category"
+              ],
+              "unique": false
+            },
+            {
+              "name": "test_methods_code_idx",
+              "columns": [
+                "code"
+              ],
+              "unique": false
+            },
+            {
+              "name": "test_methods_code_key",
+              "columns": [
+                "code"
+              ],
+              "unique": true
+            },
+            {
+              "name": "test_methods_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "transfers": {
+          "total": 3,
+          "non_primary": 2,
+          "indexes": [
+            {
+              "name": "transfers_sampleId_idx",
+              "columns": [
+                "sampleId"
+              ],
+              "unique": false
+            },
+            {
+              "name": "transfers_transferDate_idx",
+              "columns": [
+                "transferDate"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "user_roles": {
+          "total": 1,
+          "non_primary": 0,
+          "indexes": []
+        },
+        "users": {
+          "total": 3,
+          "non_primary": 2,
+          "indexes": [
+            {
+              "name": "users_email_key",
+              "columns": [
+                "email"
+              ],
+              "unique": true
+            },
+            {
+              "name": "users_username_key",
+              "columns": [
+                "username"
+              ],
+              "unique": true
+            }
+          ]
+        },
+        "workflow_instances": {
+          "total": 4,
+          "non_primary": 3,
+          "indexes": [
+            {
+              "name": "workflow_instances_sampleId_key",
+              "columns": [
+                "sampleId"
+              ],
+              "unique": true
+            },
+            {
+              "name": "workflow_instances_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            },
+            {
+              "name": "workflow_instances_workflowId_idx",
+              "columns": [
+                "workflowId"
+              ],
+              "unique": false
+            }
+          ]
+        },
+        "workflows": {
+          "total": 3,
+          "non_primary": 2,
+          "indexes": [
+            {
+              "name": "workflows_isActive_idx",
+              "columns": [
+                "isActive"
+              ],
+              "unique": false
+            },
+            {
+              "name": "workflows_status_idx",
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            }
+          ]
+        }
+      }
+    },
+    "database_sharing": {
+      "status": "PASS",
+      "can_read_nodejs_data": true,
+      "can_write_data": true,
+      "data_consistency": true,
+      "tests": [
+        {
+          "name": "读取 Node.js 数据",
+          "status": "PASS",
+          "details": {
+            "users": 7,
+            "samples": 24,
+            "workflows": 8
+          }
+        },
+        {
+          "name": "写入数据",
+          "status": "PASS",
+          "details": {
+            "test_user_id": "2769df2b-3e59-4bce-a602-9200d37947ae"
+          }
+        },
+        {
+          "name": "数据一致性",
+          "status": "PASS"
+        }
+      ]
+    }
+  },
+  "summary": {
+    "total_checks": 3,
+    "passed": 3,
+    "warnings": 0,
+    "failed": 0,
+    "schema_match_rate": "27/27",
+    "total_indexes": 69,
+    "database_sharing": "✓"
+  },
+  "issues": []
+}

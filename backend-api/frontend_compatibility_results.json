@@ -1,0 +1,64 @@
+{
+  "api_endpoints": {
+    "total": 31,
+    "passed": 31,
+    "percentage": 100.0
+  },
+  "request_formats": {
+    "total": 5,
+    "passed": 5,
+    "percentage": 100.0,
+    "checks": {
+      "JSON 请求体": true,
+      "查询参数": true,
+      "路径参数": true,
+      "文件上传": true,
+      "分页参数": true
+    }
+  },
+  "response_formats": {
+    "total": 5,
+    "passed": 5,
+    "percentage": 100.0,
+    "checks": {
+      "统一响应格式": true,
+      "分页响应格式": true,
+      "错误响应格式": true,
+      "日期时间格式": true,
+      "枚举值格式": true
+    }
+  },
+  "authentication": {
+    "total": 6,
+    "passed": 6,
+    "percentage": 100.0,
+    "checks": {
+      "JWT 令牌格式": true,
+      "Authorization Header": true,
+      "令牌刷新机制": true,
+      "令牌过期处理": true,
+      "401 未授权响应": true,
+      "403 禁止访问响应": true
+    }
+  },
+  "error_handling": {
+    "total": 5,
+    "passed": 5,
+    "percentage": 100.0,
+    "checks": {
+      "400 验证错误": true,
+      "404 资源不存在": true,
+      "409 资源冲突": true,
+      "500 服务器错误": true,
+      "错误消息格式": true
+    }
+  },
+  "summary": {
+    "total_checks": 52,
+    "passed_checks": 52,
+    "overall_percentage": 100.0,
+    "grade": "优秀",
+    "recommendation": "与前端完全兼容，可以无缝切换",
+    "issues": []
+  }
+}

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端分页测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #409eff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #409eff;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #f0f9ff;
+            border-left: 4px solid #67c23a;
+        }
+        .error {
+            background-color: #fef0f0;
+            border-left: 4px solid #f56c6c;
+        }
+        .info {
+            background-color: #f4f4f5;
+            border-left: 4px solid #909399;
+        }
+        button {
+            background-color: #409eff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #66b1ff;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .sample-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .sample-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 前端分页功能测试</h1>
+    
+    <div class="test-section">
+        <h2>测试说明</h2>
+        <div class="info status">
+            <strong>测试目标：</strong>验证样品列表分页功能是否正常工作<br>
+            <strong>预期结果：</strong>
+            <ul>
+                <li>总共262个样品，分为14页（每页20条）</li>
+                <li>第1页和第2页的数据完全不同</li>
+                <li>每次翻页都发送新的API请求</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>快速测试</h2>
+        <button onclick="testPagination()">🚀 开始测试分页</button>
+        <button onclick="clearResults()">🗑️ 清除结果</button>
+        <div id="testResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>手动测试</h2>
+        <div>
+            <label>页码: <input type="number" id="pageInput" value="1" min="1" max="14"></label>
+            <button onclick="fetchPage()">获取指定页</button>
+        </div>
+        <div id="manualResults"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1';
+        
+        async function fetchSamples(page = 1, pageSize = 20) {
+            const url = `${API_BASE}/samples?page=${page}&pageSize=${pageSize}`;
+            console.log('📡 请求URL:', url);
+            
+            const response = await fetch(url);
+            const result = await response.json();
+            
+            console.log('📡 API响应:', result);
+            return result;
+        }
+        
+        async function testPagination() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<div class="info status">⏳ 测试进行中...</div>';
+            
+            try {
+                // 获取第1页
+                console.log('=== 测试第1页 ===');
+                const page1 = await fetchSamples(1, 20);
+                const page1Barcodes = page1.data.items.map(item => item.barcode);
+                
+                // 获取第2页
+                console.log('=== 测试第2页 ===');
+                const page2 = await fetchSamples(2, 20);
+                const page2Barcodes = page2.data.items.map(item => item.barcode);
+                
+                // 检查重复
+                const overlap = page1Barcodes.filter(barcode => page2Barcodes.includes(barcode));
+                
+                let html = '<div class="result">';
+                html += `<strong>📊 测试结果：</strong>\n\n`;
+                html += `总记录数: ${page1.data.pagination.total}\n`;
+                html += `总页数: ${page1.data.pagination.totalPages}\n`;
+                html += `每页数量: ${page1.data.pagination.pageSize}\n\n`;
+                
+                html += `<strong>第1页：</strong>\n`;
+                html += `- 返回数量: ${page1.data.items.length}\n`;
+                html += `- 第1条: ${page1Barcodes[0]}\n`;
+                html += `- 最后1条: ${page1Barcodes[page1Barcodes.length - 1]}\n\n`;
+                
+                html += `<strong>第2页：</strong>\n`;
+                html += `- 返回数量: ${page2.data.items.length}\n`;
+                html += `- 第1条: ${page2Barcodes[0]}\n`;
+                html += `- 最后1条: ${page2Barcodes[page2Barcodes.length - 1]}\n\n`;
+                
+                if (overlap.length > 0) {
+                    html += `<strong style="color: red;">❌ 错误：发现重复数据！</strong>\n`;
+                    html += `重复的条码: ${overlap.join(', ')}\n`;
+                    html += '</div>';
+                    html += '<div class="error status">分页功能存在问题，两页数据有重复</div>';
+                } else {
+                    html += `<strong style="color: green;">✅ 正确：两页数据完全不同</strong>\n`;
+                    html += '</div>';
+                    html += '<div class="success status">✅ 分页功能正常工作！</div>';
+                }
+                
+                // 显示样品列表
+                html += '<div class="sample-list">';
+                html += '<strong>第1页样品条码：</strong><br>';
+                page1Barcodes.forEach(barcode => {
+                    html += `<div class="sample-item">${barcode}</div>`;
+                });
+                html += '</div>';
+                
+                html += '<div class="sample-list">';
+                html += '<strong>第2页样品条码：</strong><br>';
+                page2Barcodes.forEach(barcode => {
+                    html += `<div class="sample-item">${barcode}</div>`;
+                });
+                html += '</div>';
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('测试失败:', error);
+                resultsDiv.innerHTML = `<div class="error status">❌ 测试失败: ${error.message}</div>`;
+            }
+        }
+        
+        async function fetchPage() {
+            const page = parseInt(document.getElementById('pageInput').value);
+            const resultsDiv = document.getElementById('manualResults');
+            resultsDiv.innerHTML = '<div class="info status">⏳ 加载中...</div>';
+            
+            try {
+                const result = await fetchSamples(page, 20);
+                const barcodes = result.data.items.map(item => item.barcode);
+                
+                let html = '<div class="result">';
+                html += `<strong>第${page}页数据：</strong>\n\n`;
+                html += `返回数量: ${result.data.items.length}\n`;
+                html += `当前页码: ${result.data.pagination.page}\n`;
+                html += `总记录数: ${result.data.pagination.total}\n`;
+                html += '</div>';
+                
+                html += '<div class="sample-list">';
+                html += '<strong>样品条码列表：</strong><br>';
+                barcodes.forEach(barcode => {
+                    html += `<div class="sample-item">${barcode}</div>`;
+                });
+                html += '</div>';
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('获取失败:', error);
+                resultsDiv.innerHTML = `<div class="error status">❌ 获取失败: ${error.message}</div>`;
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('manualResults').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

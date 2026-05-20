@@ -1,0 +1,133 @@
+/* 全局样式变量 */
+
+:root {
+  /* 主色调 */
+  --primary-color: #409EFF;
+  --primary-light: #79BBFF;
+  --primary-lighter: #A0CFFF;
+  --primary-dark: #337ECC;
+  
+  /* 成功色 */
+  --success-color: #67C23A;
+  --success-light: #95D475;
+  --success-lighter: #B3E19D;
+  --success-dark: #529B2E;
+  
+  /* 警告色 */
+  --warning-color: #E6A23C;
+  --warning-light: #EEBE77;
+  --warning-lighter: #F3D19E;
+  --warning-dark: #B88230;
+  
+  /* 危险色 */
+  --danger-color: #F56C6C;
+  --danger-light: #F89898;
+  --danger-lighter: #FAB6B6;
+  --danger-dark: #C45656;
+  
+  /* 信息色 */
+  --info-color: #909399;
+  --info-light: #B1B3B8;
+  --info-lighter: #C8C9CC;
+  --info-dark: #73767A;
+  
+  /* 文本颜色 */
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --text-placeholder: #C0C4CC;
+  
+  /* 边框颜色 */
+  --border-base: #DCDFE6;
+  --border-light: #E4E7ED;
+  --border-lighter: #EBEEF5;
+  --border-extra-light: #F2F6FC;
+  
+  /* 背景颜色 */
+  --bg-color: #FFFFFF;
+  --bg-page: #F5F7FA;
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+  
+  /* 阴影 */
+  --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+  --shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  --shadow-dark: 0 4px 16px rgba(0, 0, 0, 0.12);
+  
+  /* 圆角 */
+  --border-radius-base: 4px;
+  --border-radius-small: 2px;
+  --border-radius-large: 8px;
+  --border-radius-round: 20px;
+  --border-radius-circle: 50%;
+  
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 24px;
+  
+  /* 字体大小 */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-xxl: 24px;
+  
+  /* 字体粗细 */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+  --font-weight-bolder: 700;
+  
+  /* 行高 */
+  --line-height-base: 1.5;
+  --line-height-tight: 1.25;
+  --line-height-loose: 1.75;
+  
+  /* 过渡动画 */
+  --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Z-index 层级 */
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-popover: 1060;
+  --z-index-tooltip: 1070;
+  
+  /* 布局尺寸 */
+  --header-height: 60px;
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  
+  /* 渐变色 */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-success: linear-gradient(135deg, #81FBB8 0%, #28C76F 100%);
+  --gradient-warning: linear-gradient(135deg, #FEB692 0%, #EA5455 100%);
+  --gradient-info: linear-gradient(135deg, #A8EDEA 0%, #FED6E3 100%);
+}
+
+/* 暗色主题变量（可选） */
+[data-theme="dark"] {
+  --text-primary: #E5EAF3;
+  --text-regular: #CFD3DC;
+  --text-secondary: #A3A6AD;
+  --text-placeholder: #6C6E72;
+  
+  --border-base: #4C4D4F;
+  --border-light: #414243;
+  --border-lighter: #363637;
+  --border-extra-light: #2B2B2C;
+  
+  --bg-color: #1E1E1E;
+  --bg-page: #141414;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+}

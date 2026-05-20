@@ -1,0 +1,191 @@
+﻿模板名称: 分析报告模板
+模板ID: c437c9f6-6830-4225-9289-1ff681776adf
+模板分类: ANALYSIS_REPORT
+
+=== 完整模板内容 ===
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'SimSun', serif; margin: 40px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 24px; margin: 10px 0; }
+        .header .subtitle { font-size: 14px; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+        .section { margin: 20px 0; }
+        .section-title { font-size: 16px; font-weight: bold; margin: 15px 0; 
+                        border-bottom: 2px solid #333; padding-bottom: 5px; }
+        .footer { margin-top: 40px; }
+        .signature { display: inline-block; width: 45%; margin: 10px 2%; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>检测分析报告</h1>
+        <div class="subtitle">Laboratory Analysis Report</div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">一、基本信息</div>
+        <table>
+            <tr>
+                <td width="25%"><strong>报告编号：</strong></td>
+                <td width="25%">{{reportNumber}}</td>
+                <td width="25%"><strong>样品条码：</strong></td>
+                <td width="25%">{{sampleBarcode}}</td>
+            </tr>
+            <tr>
+                <td><strong>样品名称：</strong></td>
+                <td>{{sampleName}}</td>
+                <td><strong>样品类型：</strong></td>
+                <td>{{sampleType}}</td>
+            </tr>
+            <tr>
+                <td><strong>委托单位：</strong></td>
+                <td colspan="3">{{clientName}}</td>
+            </tr>
+            <tr>
+                <td><strong>接收日期：</strong></td>
+                <td>{{receivedDate}}</td>
+                <td><strong>检测日期：</strong></td>
+                <td>{{testDate}}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">二、检测结果</div>
+        <table>
+            <thead>
+                <tr>
+                    <th width="5%">序号</th>
+                    <th width="20%">检测项目</th>
+                    <th width="20%">检测方法</th>
+                    <th width="15%">检测结果</th>
+                    <th width="10%">单位</th>
+                    <th width="15%">标准限值</th>
+                    <th width="15%">判定</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each results}}
+                <tr>
+                    <td>{{add @index 1}}</td>
+                    <td>{{this.parameter}}</td>
+                    <td>{{this.method}}</td>
+                    <td>{{this.value}}</td>
+                    <td>{{this.unit}}</td>
+                    <td>{{this.standardLimit}}</td>
+                    <td>{{this.judgment}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">三、分析说明</div>
+        <p style="text-indent: 2em; line-height: 1.8;">{{analysisDescription}}</p>
+    </div>
+    
+    <div class="footer">
+        <div class="signature">
+            <p><strong>分析人员：</strong>{{analyst}}</p>
+            <p><strong>分析日期：</strong>{{analysisDate}}</p>
+        </div>
+        <div class="signature">
+            <p><strong>审核人员：</strong>{{reviewer}}</p>
+            <p><strong>审核日期：</strong>{{reviewDate}}</p>
+        </div>
+    </div>
+</body>
+</html>
+
+
+=== 变量定义 ===
+
+[
+  {
+    "name": "reportNumber",
+    "type": "string",
+    "label": "报告编号",
+    "required": true
+  },
+  {
+    "name": "sampleBarcode",
+    "type": "string",
+    "label": "样品条码",
+    "required": true
+  },
+  {
+    "name": "sampleName",
+    "type": "string",
+    "label": "样品名称",
+    "required": true
+  },
+  {
+    "name": "sampleType",
+    "type": "string",
+    "label": "样品类型",
+    "required": true
+  },
+  {
+    "name": "clientName",
+    "type": "string",
+    "label": "委托单位",
+    "required": true
+  },
+  {
+    "name": "receivedDate",
+    "type": "date",
+    "label": "接收日期",
+    "required": true
+  },
+  {
+    "name": "testDate",
+    "type": "date",
+    "label": "检测日期",
+    "required": true
+  },
+  {
+    "name": "results",
+    "type": "array",
+    "label": "检测结果列表",
+    "required": true
+  },
+  {
+    "name": "analysisDescription",
+    "type": "string",
+    "label": "分析说明",
+    "required": false
+  },
+  {
+    "name": "analyst",
+    "type": "string",
+    "label": "分析人员",
+    "required": true
+  },
+  {
+    "name": "analysisDate",
+    "type": "date",
+    "label": "分析日期",
+    "required": true
+  },
+  {
+    "name": "reviewer",
+    "type": "string",
+    "label": "审核人员",
+    "required": true
+  },
+  {
+    "name": "reviewDate",
+    "type": "date",
+    "label": "审核日期",
+    "required": true
+  }
+]

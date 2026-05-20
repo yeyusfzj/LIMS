@@ -1,0 +1,359 @@
+# ==================== Prometheus 告警规则 ====================
+# FastAPI 后端生产环境告警规则
+
+groups:
+  # ==================== 服务可用性告警 ====================
+  - name: service_availability
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up{job="fastapi-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "FastAPI 服务不可用"
+          description: "FastAPI 后端服务已停止响应超过 1 分钟"
+          
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          category: errors
+        annotations:
+          summary: "高错误率告警"
+          description: "5xx 错误率超过 5%，当前值: {{ $value }}"
+          
+      - alert: HealthCheckFailed
+        expr: health_check_status == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: health
+        annotations:
+          summary: "健康检查失败"
+          description: "服务健康检查失败超过 2 分钟"
+
+  # ==================== 性能告警 ====================
+  - name: performance
+    interval: 30s
+    rules:
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "响应时间过高"
+          description: "P95 响应时间超过 1 秒，当前值: {{ $value }}s"
+          
+      - alert: VeryHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 3
+        for: 5m
+        labels:
+          severity: critical
+          category: performance
+        annotations:
+          summary: "响应时间严重过高"
+          description: "P95 响应时间超过 3 秒，当前值: {{ $value }}s"
+          
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[1m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "请求速率过高"
+          description: "请求速率超过 1000 QPS，当前值: {{ $value }}"
+          
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "数据库查询缓慢"
+          description: "P95 数据库查询时间超过 500ms，当前值: {{ $value }}s"
+
+  # ==================== 资源使用告警 ====================
+  - name: resource_usage
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: process_cpu_seconds_total > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "CPU 使用率过高"
+          description: "CPU 使用率超过 80%，当前值: {{ $value }}"
+          
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 / 1024 > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "内存使用过高"
+          description: "内存使用超过 1.5GB，当前值: {{ $value }}GB"
+          
+      - alert: VeryHighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 / 1024 > 2
+        for: 5m
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          summary: "内存使用严重过高"
+          description: "内存使用超过 2GB，当前值: {{ $value }}GB"
+          
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "磁盘使用率过高"
+          description: "磁盘使用率超过 80%，当前值: {{ $value }}"
+          
+      - alert: VeryHighDiskUsage
+        expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          summary: "磁盘使用率严重过高"
+          description: "磁盘使用率超过 90%，当前值: {{ $value }}"
+
+  # ==================== 数据库告警 ====================
+  - name: database
+    interval: 30s
+    rules:
+      - alert: DatabaseConnectionFailed
+        expr: database_connection_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "数据库连接失败"
+          description: "无法连接到数据库超过 1 分钟"
+          
+      - alert: HighDatabaseConnections
+        expr: database_connections_active > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "数据库连接数过高"
+          description: "活跃数据库连接数超过 80，当前值: {{ $value }}"
+          
+      - alert: DatabasePoolExhausted
+        expr: database_pool_exhausted_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "数据库连接池耗尽"
+          description: "数据库连接池已耗尽，无法获取新连接"
+          
+      - alert: HighDatabaseErrorRate
+        expr: rate(database_errors_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "数据库错误率过高"
+          description: "数据库错误率超过 1%，当前值: {{ $value }}"
+
+  # ==================== Redis 告警 ====================
+  - name: redis
+    interval: 30s
+    rules:
+      - alert: RedisConnectionFailed
+        expr: redis_connection_status == 0
+        for: 2m
+        labels:
+          severity: warning
+          category: redis
+        annotations:
+          summary: "Redis 连接失败"
+          description: "无法连接到 Redis 超过 2 分钟"
+          
+      - alert: HighRedisMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          category: redis
+        annotations:
+          summary: "Redis 内存使用率过高"
+          description: "Redis 内存使用率超过 80%，当前值: {{ $value }}"
+          
+      - alert: RedisKeyEvictions
+        expr: rate(redis_evicted_keys_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: redis
+        annotations:
+          summary: "Redis 键驱逐率过高"
+          description: "Redis 键驱逐率过高，可能需要增加内存"
+
+  # ==================== 业务指标告警 ====================
+  - name: business_metrics
+    interval: 1m
+    rules:
+      - alert: HighLoginFailureRate
+        expr: rate(login_failures_total[5m]) / rate(login_attempts_total[5m]) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "登录失败率过高"
+          description: "登录失败率超过 30%，可能存在暴力破解攻击"
+          
+      - alert: HighRateLimitHits
+        expr: rate(rate_limit_hits_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "限流触发频繁"
+          description: "限流触发次数过多，当前速率: {{ $value }}/s"
+          
+      - alert: HighExportFailureRate
+        expr: rate(export_failures_total[5m]) / rate(export_attempts_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "导出失败率过高"
+          description: "导出失败率超过 10%，当前值: {{ $value }}"
+          
+      - alert: HighImportFailureRate
+        expr: rate(import_failures_total[5m]) / rate(import_attempts_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "导入失败率过高"
+          description: "导入失败率超过 10%，当前值: {{ $value }}"
+
+  # ==================== 队列告警 ====================
+  - name: queue
+    interval: 30s
+    rules:
+      - alert: HighQueueLength
+        expr: queue_length > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: queue
+        annotations:
+          summary: "队列长度过长"
+          description: "队列中待处理任务超过 1000，当前值: {{ $value }}"
+          
+      - alert: VeryHighQueueLength
+        expr: queue_length > 5000
+        for: 5m
+        labels:
+          severity: critical
+          category: queue
+        annotations:
+          summary: "队列长度严重过长"
+          description: "队列中待处理任务超过 5000，当前值: {{ $value }}"
+          
+      - alert: HighQueueProcessingTime
+        expr: histogram_quantile(0.95, rate(queue_processing_duration_seconds_bucket[5m])) > 60
+        for: 5m
+        labels:
+          severity: warning
+          category: queue
+        annotations:
+          summary: "队列任务处理时间过长"
+          description: "P95 队列任务处理时间超过 60 秒，当前值: {{ $value }}s"
+          
+      - alert: HighQueueFailureRate
+        expr: rate(queue_failures_total[5m]) / rate(queue_processed_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: queue
+        annotations:
+          summary: "队列任务失败率过高"
+          description: "队列任务失败率超过 10%，当前值: {{ $value }}"
+
+  # ==================== 备份告警 ====================
+  - name: backup
+    interval: 1h
+    rules:
+      - alert: BackupFailed
+        expr: time() - backup_last_success_timestamp > 86400
+        for: 1h
+        labels:
+          severity: critical
+          category: backup
+        annotations:
+          summary: "备份失败"
+          description: "超过 24 小时没有成功的备份"
+          
+      - alert: BackupTooOld
+        expr: time() - backup_last_success_timestamp > 172800
+        for: 1h
+        labels:
+          severity: critical
+          category: backup
+        annotations:
+          summary: "备份过期"
+          description: "最后一次成功备份已超过 48 小时"
+
+  # ==================== 安全告警 ====================
+  - name: security
+    interval: 1m
+    rules:
+      - alert: SuspiciousActivity
+        expr: rate(suspicious_requests_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "检测到可疑活动"
+          description: "检测到可疑请求，速率: {{ $value }}/s"
+          
+      - alert: UnauthorizedAccessAttempts
+        expr: rate(unauthorized_access_total[5m]) > 20
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "未授权访问尝试过多"
+          description: "未授权访问尝试速率: {{ $value }}/s"
+          
+      - alert: TokenValidationFailures
+        expr: rate(token_validation_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "令牌验证失败过多"
+          description: "令牌验证失败速率: {{ $value }}/s"

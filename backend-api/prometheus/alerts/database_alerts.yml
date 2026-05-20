@@ -1,0 +1,71 @@
+# 数据库告警规则
+
+groups:
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # 数据库连接数告警
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "数据库连接数过高"
+          description: "数据库 {{ $labels.datname }} 连接数超过 80，当前值: {{ $value }}"
+
+      # 数据库连接池耗尽
+      - alert: DatabaseConnectionPoolExhausted
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "数据库连接池即将耗尽"
+          description: "数据库连接使用率超过 90%"
+
+      # 数据库查询时间过长
+      - alert: SlowDatabaseQueries
+        expr: rate(pg_stat_statements_mean_exec_time[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "数据库查询时间过长"
+          description: "平均查询时间超过 1 秒"
+
+      # 数据库死锁
+      - alert: DatabaseDeadlocks
+        expr: rate(pg_stat_database_deadlocks[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "检测到数据库死锁"
+          description: "数据库 {{ $labels.datname }} 发生死锁"
+
+      # 数据库磁盘空间不足
+      - alert: DatabaseDiskSpaceLow
+        expr: (pg_database_size_bytes / node_filesystem_size_bytes) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "数据库磁盘空间不足"
+          description: "数据库磁盘使用率超过 80%"
+
+      # 数据库不可用
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "数据库不可用"
+          description: "PostgreSQL 数据库无法连接"

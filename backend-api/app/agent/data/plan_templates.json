@@ -1,0 +1,47 @@
+{
+  "default": {
+    "title": "实验计划",
+    "sections": [
+      {
+        "order": 1,
+        "title": "实验目的",
+        "field": "purpose"
+      },
+      {
+        "order": 2,
+        "title": "样品信息",
+        "field": "sample_info"
+      },
+      {
+        "order": 3,
+        "title": "检测指标",
+        "field": "indicators"
+      },
+      {
+        "order": 4,
+        "title": "所需设备",
+        "field": "equipment"
+      },
+      {
+        "order": 5,
+        "title": "所需材料",
+        "field": "materials"
+      },
+      {
+        "order": 6,
+        "title": "实验步骤",
+        "field": "steps"
+      },
+      {
+        "order": 7,
+        "title": "预计时间",
+        "field": "estimated_time"
+      },
+      {
+        "order": 8,
+        "title": "注意事项",
+        "field": "safety_notes"
+      }
+    ]
+  }
+}

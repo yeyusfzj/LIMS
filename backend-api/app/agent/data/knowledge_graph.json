@@ -1,0 +1,649 @@
+{
+  "experiment_types": [
+    {
+      "id": "water_heavy_metal",
+      "name": "水样重金属检测",
+      "category": "环境检测",
+      "equipment_ids": ["eq_001", "eq_002", "eq_003"],
+      "material_ids": ["mat_001", "mat_002", "mat_003"],
+      "indicator_ids": ["ind_001", "ind_002", "ind_003", "ind_004", "ind_005"],
+      "step_ids": ["step_001", "step_002", "step_003", "step_004", "step_005"]
+    },
+    {
+      "id": "soil_organic",
+      "name": "土壤有机物检测",
+      "category": "环境检测",
+      "equipment_ids": ["eq_004", "eq_005", "eq_006"],
+      "material_ids": ["mat_004", "mat_005", "mat_006"],
+      "indicator_ids": ["ind_006", "ind_007", "ind_008"],
+      "step_ids": ["step_006", "step_007", "step_008", "step_009"]
+    },
+    {
+      "id": "air_quality",
+      "name": "空气质量检测",
+      "category": "环境检测",
+      "equipment_ids": ["eq_007", "eq_008", "eq_009"],
+      "material_ids": ["mat_007", "mat_008"],
+      "indicator_ids": ["ind_009", "ind_010", "ind_011", "ind_012"],
+      "step_ids": ["step_010", "step_011", "step_012"]
+    },
+    {
+      "id": "food_pesticide",
+      "name": "食品农药残留检测",
+      "category": "食品检测",
+      "equipment_ids": ["eq_004", "eq_010", "eq_011"],
+      "material_ids": ["mat_009", "mat_010", "mat_011"],
+      "indicator_ids": ["ind_013", "ind_014", "ind_015"],
+      "step_ids": ["step_013", "step_014", "step_015", "step_016"]
+    },
+    {
+      "id": "water_microbiology",
+      "name": "水质微生物检测",
+      "category": "环境检测",
+      "equipment_ids": ["eq_012", "eq_013", "eq_014"],
+      "material_ids": ["mat_012", "mat_013", "mat_014"],
+      "indicator_ids": ["ind_016", "ind_017", "ind_018"],
+      "step_ids": ["step_017", "step_018", "step_019", "step_020"]
+    },
+    {
+      "id": "drug_content",
+      "name": "药品含量测定",
+      "category": "药品检测",
+      "equipment_ids": ["eq_015", "eq_016", "eq_003"],
+      "material_ids": ["mat_015", "mat_016", "mat_017"],
+      "indicator_ids": ["ind_019", "ind_020"],
+      "step_ids": ["step_021", "step_022", "step_023", "step_024"]
+    }
+  ],
+  "equipment": [
+    {
+      "id": "eq_001",
+      "name": "原子吸收光谱仪",
+      "model": "AAS-2000",
+      "category": "分析仪器",
+      "specifications": "检测限: 0.001 mg/L, 波长范围: 190-900nm"
+    },
+    {
+      "id": "eq_002",
+      "name": "电热消解仪",
+      "model": "EH-20",
+      "category": "前处理设备",
+      "specifications": "温度范围: 室温-200°C, 孔位: 20个"
+    },
+    {
+      "id": "eq_003",
+      "name": "分析天平",
+      "model": "AB-220",
+      "category": "辅助设备",
+      "specifications": "精度: 0.0001g, 量程: 220g"
+    },
+    {
+      "id": "eq_004",
+      "name": "气相色谱仪",
+      "model": "GC-2030",
+      "category": "分析仪器",
+      "specifications": "检测器: FID/ECD, 温度范围: 室温-450°C"
+    },
+    {
+      "id": "eq_005",
+      "name": "索氏提取器",
+      "model": "SE-6",
+      "category": "前处理设备",
+      "specifications": "提取瓶容量: 250ml, 位数: 6位"
+    },
+    {
+      "id": "eq_006",
+      "name": "旋转蒸发仪",
+      "model": "RE-52",
+      "category": "前处理设备",
+      "specifications": "转速: 0-280rpm, 水浴温度: 室温-99°C"
+    },
+    {
+      "id": "eq_007",
+      "name": "大气采样器",
+      "model": "AS-100",
+      "category": "采样设备",
+      "specifications": "流量范围: 0.1-5 L/min, 采样时间: 可编程"
+    },
+    {
+      "id": "eq_008",
+      "name": "紫外分光光度计",
+      "model": "UV-2600",
+      "category": "分析仪器",
+      "specifications": "波长范围: 190-1100nm, 带宽: 0.1/0.2/0.5/1/2/5nm"
+    },
+    {
+      "id": "eq_009",
+      "name": "粒子计数器",
+      "model": "PC-3016",
+      "category": "分析仪器",
+      "specifications": "粒径范围: 0.3-10μm, 通道数: 6个"
+    },
+    {
+      "id": "eq_010",
+      "name": "固相萃取装置",
+      "model": "SPE-12",
+      "category": "前处理设备",
+      "specifications": "通道数: 12个, 流速: 1-10 ml/min"
+    },
+    {
+      "id": "eq_011",
+      "name": "匀浆机",
+      "model": "HM-500",
+      "category": "前处理设备",
+      "specifications": "转速: 0-24000 rpm, 容量: 500ml"
+    },
+    {
+      "id": "eq_012",
+      "name": "生物安全柜",
+      "model": "BSC-1100",
+      "category": "辅助设备",
+      "specifications": "等级: II级A2型, 工作区尺寸: 1100×600×650mm"
+    },
+    {
+      "id": "eq_013",
+      "name": "恒温培养箱",
+      "model": "DH-360",
+      "category": "辅助设备",
+      "specifications": "温度范围: 室温+5-65°C, 容积: 360L"
+    },
+    {
+      "id": "eq_014",
+      "name": "显微镜",
+      "model": "BM-2000",
+      "category": "分析仪器",
+      "specifications": "放大倍数: 40-1000倍, 照明: LED"
+    },
+    {
+      "id": "eq_015",
+      "name": "高效液相色谱仪",
+      "model": "HPLC-1260",
+      "category": "分析仪器",
+      "specifications": "检测器: UV/DAD, 流速: 0.001-10 ml/min"
+    },
+    {
+      "id": "eq_016",
+      "name": "超声波清洗器",
+      "model": "UC-300",
+      "category": "前处理设备",
+      "specifications": "频率: 40 kHz, 功率: 300W, 容量: 10L"
+    }
+  ],
+  "materials": [
+    {
+      "id": "mat_001",
+      "name": "硝酸",
+      "concentration": "65%",
+      "cas_number": "7697-37-2",
+      "safety_level": "危险"
+    },
+    {
+      "id": "mat_002",
+      "name": "盐酸",
+      "concentration": "37%",
+      "cas_number": "7647-01-0",
+      "safety_level": "危险"
+    },
+    {
+      "id": "mat_003",
+      "name": "重金属标准溶液",
+      "concentration": "1000 mg/L",
+      "cas_number": "混合标准",
+      "safety_level": "低危"
+    },
+    {
+      "id": "mat_004",
+      "name": "正己烷",
+      "concentration": "99%",
+      "cas_number": "110-54-3",
+      "safety_level": "易燃"
+    },
+    {
+      "id": "mat_005",
+      "name": "丙酮",
+      "concentration": "99.5%",
+      "cas_number": "67-64-1",
+      "safety_level": "易燃"
+    },
+    {
+      "id": "mat_006",
+      "name": "有机物标准品",
+      "concentration": "1000 mg/L",
+      "cas_number": "混合标准",
+      "safety_level": "低危"
+    },
+    {
+      "id": "mat_007",
+      "name": "吸收液",
+      "concentration": "0.1 mol/L NaOH",
+      "cas_number": "1310-73-2",
+      "safety_level": "腐蚀性"
+    },
+    {
+      "id": "mat_008",
+      "name": "显色剂",
+      "concentration": "按说明书配制",
+      "cas_number": "混合试剂",
+      "safety_level": "低危"
+    },
+    {
+      "id": "mat_009",
+      "name": "乙腈",
+      "concentration": "色谱纯",
+      "cas_number": "75-05-8",
+      "safety_level": "易燃"
+    },
+    {
+      "id": "mat_010",
+      "name": "氯化钠",
+      "concentration": "分析纯",
+      "cas_number": "7647-14-5",
+      "safety_level": "低危"
+    },
+    {
+      "id": "mat_011",
+      "name": "农药混合标准溶液",
+      "concentration": "100 μg/ml",
+      "cas_number": "混合标准",
+      "safety_level": "低危"
+    },
+    {
+      "id": "mat_012",
+      "name": "营养琼脂培养基",
+      "concentration": "按说明书配制",
+      "cas_number": "培养基",
+      "safety_level": "低危"
+    },
+    {
+      "id": "mat_013",
+      "name": "麦康凯琼脂培养基",
+      "concentration": "按说明书配制",
+      "cas_number": "培养基",
+      "safety_level": "低危"
+    },
+    {
+      "id": "mat_014",
+      "name": "无菌生理盐水",
+      "concentration": "0.9%",
+      "cas_number": "7647-14-5",
+      "safety_level": "低危"
+    },
+    {
+      "id": "mat_015",
+      "name": "甲醇",
+      "concentration": "色谱纯",
+      "cas_number": "67-56-1",
+      "safety_level": "易燃"
+    },
+    {
+      "id": "mat_016",
+      "name": "磷酸盐缓冲液",
+      "concentration": "pH 7.0",
+      "cas_number": "混合缓冲液",
+      "safety_level": "低危"
+    },
+    {
+      "id": "mat_017",
+      "name": "药品对照品",
+      "concentration": "按药典规定",
+      "cas_number": "对照品",
+      "safety_level": "低危"
+    }
+  ],
+  "indicators": [
+    {
+      "id": "ind_001",
+      "name": "铅含量",
+      "unit": "mg/L",
+      "method": "原子吸收法",
+      "threshold_min": 0,
+      "threshold_max": 0.01
+    },
+    {
+      "id": "ind_002",
+      "name": "汞含量",
+      "unit": "mg/L",
+      "method": "原子吸收法",
+      "threshold_min": 0,
+      "threshold_max": 0.001
+    },
+    {
+      "id": "ind_003",
+      "name": "镉含量",
+      "unit": "mg/L",
+      "method": "原子吸收法",
+      "threshold_min": 0,
+      "threshold_max": 0.005
+    },
+    {
+      "id": "ind_004",
+      "name": "铬含量",
+      "unit": "mg/L",
+      "method": "原子吸收法",
+      "threshold_min": 0,
+      "threshold_max": 0.05
+    },
+    {
+      "id": "ind_005",
+      "name": "砷含量",
+      "unit": "mg/L",
+      "method": "原子吸收法",
+      "threshold_min": 0,
+      "threshold_max": 0.01
+    },
+    {
+      "id": "ind_006",
+      "name": "苯含量",
+      "unit": "mg/kg",
+      "method": "气相色谱法",
+      "threshold_min": 0,
+      "threshold_max": 0.1
+    },
+    {
+      "id": "ind_007",
+      "name": "甲苯含量",
+      "unit": "mg/kg",
+      "method": "气相色谱法",
+      "threshold_min": 0,
+      "threshold_max": 1.2
+    },
+    {
+      "id": "ind_008",
+      "name": "二甲苯含量",
+      "unit": "mg/kg",
+      "method": "气相色谱法",
+      "threshold_min": 0,
+      "threshold_max": 0.5
+    },
+    {
+      "id": "ind_009",
+      "name": "PM2.5",
+      "unit": "μg/m³",
+      "method": "重量法",
+      "threshold_min": 0,
+      "threshold_max": 75
+    },
+    {
+      "id": "ind_010",
+      "name": "PM10",
+      "unit": "μg/m³",
+      "method": "重量法",
+      "threshold_min": 0,
+      "threshold_max": 150
+    },
+    {
+      "id": "ind_011",
+      "name": "SO2",
+      "unit": "μg/m³",
+      "method": "紫外荧光法",
+      "threshold_min": 0,
+      "threshold_max": 150
+    },
+    {
+      "id": "ind_012",
+      "name": "NO2",
+      "unit": "μg/m³",
+      "method": "化学发光法",
+      "threshold_min": 0,
+      "threshold_max": 80
+    },
+    {
+      "id": "ind_013",
+      "name": "有机磷农药",
+      "unit": "mg/kg",
+      "method": "气相色谱法",
+      "threshold_min": 0,
+      "threshold_max": 0.5
+    },
+    {
+      "id": "ind_014",
+      "name": "有机氯农药",
+      "unit": "mg/kg",
+      "method": "气相色谱法",
+      "threshold_min": 0,
+      "threshold_max": 0.2
+    },
+    {
+      "id": "ind_015",
+      "name": "氨基甲酸酯类农药",
+      "unit": "mg/kg",
+      "method": "液相色谱法",
+      "threshold_min": 0,
+      "threshold_max": 0.5
+    },
+    {
+      "id": "ind_016",
+      "name": "菌落总数",
+      "unit": "CFU/ml",
+      "method": "平板计数法",
+      "threshold_min": 0,
+      "threshold_max": 100
+    },
+    {
+      "id": "ind_017",
+      "name": "总大肠菌群",
+      "unit": "MPN/100ml",
+      "method": "多管发酵法",
+      "threshold_min": 0,
+      "threshold_max": 3
+    },
+    {
+      "id": "ind_018",
+      "name": "耐热大肠菌群",
+      "unit": "MPN/100ml",
+      "method": "多管发酵法",
+      "threshold_min": 0,
+      "threshold_max": 0
+    },
+    {
+      "id": "ind_019",
+      "name": "主药含量",
+      "unit": "%",
+      "method": "高效液相色谱法",
+      "threshold_min": 95.0,
+      "threshold_max": 105.0
+    },
+    {
+      "id": "ind_020",
+      "name": "有关物质",
+      "unit": "%",
+      "method": "高效液相色谱法",
+      "threshold_min": 0,
+      "threshold_max": 0.5
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_001",
+      "order": 1,
+      "title": "样品采集",
+      "description": "使用清洁的聚乙烯瓶采集水样500ml，加入硝酸至pH<2保存",
+      "duration": "10分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_002",
+      "order": 2,
+      "title": "样品消解",
+      "description": "取100ml水样于消解管中，加入5ml硝酸，在电热消解仪上加热消解",
+      "duration": "30分钟",
+      "temperature": "95°C"
+    },
+    {
+      "id": "step_003",
+      "order": 3,
+      "title": "定容",
+      "description": "消解完成后冷却，用去离子水定容至100ml",
+      "duration": "5分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_004",
+      "order": 4,
+      "title": "仪器测定",
+      "description": "使用原子吸收光谱仪测定各重金属元素含量，每个样品平行测定3次",
+      "duration": "20分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_005",
+      "order": 5,
+      "title": "数据处理",
+      "description": "计算平均值，绘制标准曲线，计算样品中重金属含量",
+      "duration": "15分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_006",
+      "order": 1,
+      "title": "样品采集与预处理",
+      "description": "采集土壤样品约500g，去除杂质后风干，研磨过2mm筛",
+      "duration": "2天",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_007",
+      "order": 2,
+      "title": "索氏提取",
+      "description": "称取10g土样，用正己烷在索氏提取器中提取8小时",
+      "duration": "8小时",
+      "temperature": "60-70°C"
+    },
+    {
+      "id": "step_008",
+      "order": 3,
+      "title": "浓缩净化",
+      "description": "提取液用旋转蒸发仪浓缩至约2ml，用硅胶柱净化",
+      "duration": "1小时",
+      "temperature": "40°C"
+    },
+    {
+      "id": "step_009",
+      "order": 4,
+      "title": "气相色谱分析",
+      "description": "净化后的样品用气相色谱仪分析，测定各有机物含量",
+      "duration": "30分钟",
+      "temperature": "程序升温"
+    },
+    {
+      "id": "step_010",
+      "order": 1,
+      "title": "采样点布设",
+      "description": "根据监测方案在采样点安装大气采样器，设置采样流量和时间",
+      "duration": "30分钟",
+      "temperature": "环境温度"
+    },
+    {
+      "id": "step_011",
+      "order": 2,
+      "title": "样品采集",
+      "description": "使用大气采样器采集空气样品，记录采样体积和环境参数",
+      "duration": "24小时",
+      "temperature": "环境温度"
+    },
+    {
+      "id": "step_012",
+      "order": 3,
+      "title": "样品分析",
+      "description": "使用相应仪器分析PM2.5、PM10、SO2、NO2等指标",
+      "duration": "2小时",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_013",
+      "order": 1,
+      "title": "样品制备",
+      "description": "称取食品样品25g，加入50ml乙腈，用匀浆机匀浆2分钟",
+      "duration": "10分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_014",
+      "order": 2,
+      "title": "提取净化",
+      "description": "加入氯化钠振荡提取，离心后取上清液，经固相萃取柱净化",
+      "duration": "30分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_015",
+      "order": 3,
+      "title": "浓缩定容",
+      "description": "净化液用氮吹仪浓缩至近干，用乙腈定容至2ml",
+      "duration": "20分钟",
+      "temperature": "40°C"
+    },
+    {
+      "id": "step_016",
+      "order": 4,
+      "title": "仪器分析",
+      "description": "用气相色谱仪测定农药残留量，绘制标准曲线并计算含量",
+      "duration": "30分钟",
+      "temperature": "程序升温"
+    },
+    {
+      "id": "step_017",
+      "order": 1,
+      "title": "样品采集",
+      "description": "用无菌采样瓶采集水样500ml，4°C保存，24小时内检测",
+      "duration": "10分钟",
+      "temperature": "4°C保存"
+    },
+    {
+      "id": "step_018",
+      "order": 2,
+      "title": "样品稀释",
+      "description": "在生物安全柜中用无菌生理盐水进行10倍系列稀释",
+      "duration": "15分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_019",
+      "order": 3,
+      "title": "接种培养",
+      "description": "取适当稀释度的样品接种于培养基，倒置于恒温培养箱培养",
+      "duration": "24-48小时",
+      "temperature": "36±1°C"
+    },
+    {
+      "id": "step_020",
+      "order": 4,
+      "title": "计数报告",
+      "description": "培养后计数菌落，计算菌落总数和大肠菌群数",
+      "duration": "30分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_021",
+      "order": 1,
+      "title": "供试品制备",
+      "description": "精密称取药品适量，加流动相溶解并定容至刻度",
+      "duration": "20分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_022",
+      "order": 2,
+      "title": "对照品制备",
+      "description": "精密称取对照品适量，加流动相溶解并定容，配制对照品溶液",
+      "duration": "15分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_023",
+      "order": 3,
+      "title": "色谱分析",
+      "description": "分别精密吸取对照品和供试品溶液，注入液相色谱仪测定",
+      "duration": "40分钟",
+      "temperature": "常温"
+    },
+    {
+      "id": "step_024",
+      "order": 4,
+      "title": "含量计算",
+      "description": "按外标法计算供试品中主药含量，检查有关物质",
+      "duration": "15分钟",
+      "temperature": "常温"
+    }
+  ]
+}

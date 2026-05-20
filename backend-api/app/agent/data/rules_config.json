@@ -1,0 +1,218 @@
+{
+  "rules": [
+    {
+      "id": "water_ph_range",
+      "name": "水质pH值范围检查",
+      "indicator": "pH",
+      "type": "range",
+      "severity": "medium",
+      "message": "pH值超出正常范围（6.5-8.5），可能影响水质安全",
+      "suggestion": "检查样品保存条件，确认测量仪器校准状态，必要时重新采样检测",
+      "range": {
+        "min": 6.5,
+        "max": 8.5
+      }
+    },
+    {
+      "id": "water_lead_threshold",
+      "name": "水质铅含量阈值检查",
+      "indicator": "铅含量",
+      "type": "threshold",
+      "severity": "high",
+      "message": "铅含量超标，超过国家饮用水标准（0.01 mg/L）",
+      "suggestion": "立即停止使用该水源，追溯污染源，建议进行管道系统检查和水质深度处理",
+      "threshold": {
+        "min": 0.0,
+        "max": 0.01,
+        "unit": "mg/L"
+      }
+    },
+    {
+      "id": "water_turbidity_threshold",
+      "name": "水质浊度阈值检查",
+      "indicator": "浊度",
+      "type": "threshold",
+      "severity": "medium",
+      "message": "浊度超标，超过饮用水标准（1 NTU）",
+      "suggestion": "检查水源是否受到悬浮物污染，建议增加过滤处理或更换水源",
+      "threshold": {
+        "min": 0.0,
+        "max": 1.0,
+        "unit": "NTU"
+      }
+    },
+    {
+      "id": "soil_ph_range",
+      "name": "土壤pH值范围检查",
+      "indicator": "土壤pH",
+      "type": "range",
+      "severity": "low",
+      "message": "土壤pH值异常，不在适宜作物生长范围（5.5-7.5）",
+      "suggestion": "根据作物需求调整土壤酸碱度，酸性土壤可施用石灰，碱性土壤可施用硫磺或有机肥",
+      "range": {
+        "min": 5.5,
+        "max": 7.5
+      }
+    },
+    {
+      "id": "soil_heavy_metal_cadmium",
+      "name": "土壤镉含量阈值检查",
+      "indicator": "镉含量",
+      "type": "threshold",
+      "severity": "high",
+      "message": "土壤镉含量超标，超过农用地土壤污染风险筛选值（0.3 mg/kg）",
+      "suggestion": "禁止种植食用农产品，建议进行土壤修复或改变土地用途，追查重金属污染源",
+      "threshold": {
+        "min": 0.0,
+        "max": 0.3,
+        "unit": "mg/kg"
+      }
+    },
+    {
+      "id": "air_pm25_threshold",
+      "name": "空气PM2.5浓度阈值检查",
+      "indicator": "PM2.5",
+      "type": "threshold",
+      "severity": "medium",
+      "message": "PM2.5浓度超标，超过国家二级标准（75 μg/m³）",
+      "suggestion": "建议减少户外活动，关闭门窗，使用空气净化设备，关注空气质量预报",
+      "threshold": {
+        "min": 0.0,
+        "max": 75.0,
+        "unit": "μg/m³"
+      }
+    },
+    {
+      "id": "air_co_threshold",
+      "name": "空气一氧化碳浓度阈值检查",
+      "indicator": "一氧化碳",
+      "type": "threshold",
+      "severity": "high",
+      "message": "一氧化碳浓度超标，超过室内空气质量标准（10 mg/m³）",
+      "suggestion": "立即开窗通风，检查燃气设备是否泄漏，必要时疏散人员并联系专业检测机构",
+      "threshold": {
+        "min": 0.0,
+        "max": 10.0,
+        "unit": "mg/m³"
+      }
+    },
+    {
+      "id": "sample_temperature_range",
+      "name": "样品保存温度范围检查",
+      "indicator": "保存温度",
+      "type": "range",
+      "severity": "medium",
+      "message": "样品保存温度异常，不在规定范围（2-8°C）",
+      "suggestion": "检查冷藏设备运行状态，确认温度记录仪数据，评估样品是否需要重新采集",
+      "range": {
+        "min": 2.0,
+        "max": 8.0
+      }
+    },
+    {
+      "id": "sample_status_enum",
+      "name": "样品状态枚举检查",
+      "indicator": "样品状态",
+      "type": "enum",
+      "severity": "low",
+      "message": "样品状态异常，不在允许的状态列表中",
+      "suggestion": "检查样品外观、气味和完整性，确认样品是否符合检测要求",
+      "enum_values": [
+        "正常",
+        "合格",
+        "良好",
+        "完整"
+      ]
+    },
+    {
+      "id": "water_comprehensive_check",
+      "name": "水质综合安全检查",
+      "indicator": "水质综合评估",
+      "type": "logic",
+      "severity": "high",
+      "message": "水质综合检测不合格，多项指标异常",
+      "suggestion": "该水源不适合饮用，需要进行全面的水质处理或更换水源",
+      "logic": {
+        "operator": "and",
+        "rules": [
+          "water_ph_range",
+          "water_lead_threshold",
+          "water_turbidity_threshold"
+        ]
+      }
+    },
+    {
+      "id": "environmental_alert",
+      "name": "环境质量预警检查",
+      "indicator": "环境综合评估",
+      "type": "logic",
+      "severity": "medium",
+      "message": "环境质量存在问题，至少一项指标超标",
+      "suggestion": "关注环境质量变化，采取相应的防护或改善措施",
+      "logic": {
+        "operator": "or",
+        "rules": [
+          "air_pm25_threshold",
+          "air_co_threshold"
+        ]
+      }
+    },
+    {
+      "id": "test_rule_001",
+      "name": "铅含量阈值检查",
+      "indicator": "铅含量",
+      "type": "threshold",
+      "severity": "high",
+      "message": "铅含量超标",
+      "suggestion": "建议重新采样检测，确认是否存在污染源",
+      "threshold": {
+        "min": 0.0,
+        "max": 0.01,
+        "unit": "mg/L"
+      }
+    },
+    {
+      "id": "test_rule_002",
+      "name": "铅含量阈值检查",
+      "indicator": "铅含量",
+      "type": "threshold",
+      "severity": "high",
+      "message": "铅含量超标",
+      "suggestion": "建议重新采样检测",
+      "threshold": {
+        "min": 0.0,
+        "max": 0.01,
+        "unit": "mg/L"
+      }
+    },
+    {
+      "id": "test_rule_003",
+      "name": "pH 值范围检查",
+      "indicator": "pH",
+      "type": "range",
+      "severity": "medium",
+      "message": "pH 值异常",
+      "suggestion": "检查样品保存条件和测量仪器校准",
+      "range": {
+        "min": 6.5,
+        "max": 8.5
+      }
+    },
+    {
+      "id": "test_rule_004",
+      "name": "样品状态检查",
+      "indicator": "样品状态",
+      "type": "enum",
+      "severity": "low",
+      "message": "样品状态异常",
+      "suggestion": "检查样品质量",
+      "enum_values": [
+        "正常",
+        "合格",
+        "良好"
+      ]
+    }
+  ],
+  "version": "1.0",
+  "description": "规则引擎配置文件"
+}

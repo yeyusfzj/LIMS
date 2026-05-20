@@ -1,0 +1,1436 @@
+"""
+审核服务
+
+实现多级审核流程管理，包括审核任务的创建、查询、更新、删除、分配和执行功能。
+"""
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_, func, update
+from sqlalchemy.orm import selectinload, joinedload
+from typing import List, Optional, Dict, Any
+from datetime import datetime, timedelta
+from app.models.audit import (
+    AuditTask, AuditCommentTemplate, AuditWorkflowConfig, AuditHistory,
+    AuditStatus, AuditDecision, CommentTemplateType, WorkflowConfigStatus
+)
+from app.models.sample import Sample, SampleStatus
+from app.models.task import Task, TaskStatus, Priority
+from app.models.workflow import WorkflowInstance, InstanceStatus
+from app.models.judgment import QualityJudgment
+from app.schemas.audit import (
+    SubmitAuditDto, PerformAuditDto, ReassignAuditDto, AuditTaskQuery,
+    AuditTaskResponse, AuditResult, AuditStatistics,
+    CreateTemplateDto, UpdateTemplateDto, AuditCommentTemplateResponse,
+    CreateWorkflowConfigDto, UpdateWorkflowConfigDto, AuditWorkflowConfigResponse,
+    AuditHistoryResponse, ReleaseSampleResponse, BatchReleaseSamplesResponse,
+    BatchReleaseResult, AuditLevelConfig, AuditConfig
+)
+from app.core.exceptions import NotFoundException, ValidationException, ConflictException
+from app.core.logging import logger
+from app.services.export_service import export_service
+import uuid
+
+
+class AuditService:
+    """审核服务类"""
+    
+    # 默认审核配置
+    DEFAULT_AUDIT_CONFIG = AuditConfig(
+        levels=[
+            AuditLevelConfig(level=1, name="初审", auditorIds=[], autoAssign=True),
+            AuditLevelConfig(level=2, name="复审", auditorIds=[], autoAssign=True),
+            AuditLevelConfig(level=3, name="终审", auditorIds=[], autoAssign=True)
+        ]
+    )
+    
+    async def submit_for_audit(
+        self,
+        db: AsyncSession,
+        dto: SubmitAuditDto
+    ) -> List[AuditTaskResponse]:
+        """
+        提交样品审核
+        根据配置创建多级审核任务
+        """
+        audit_config = dto.auditConfig or self.DEFAULT_AUDIT_CONFIG
+        
+        # 验证样品存在且状态正确
+        result = await db.execute(
+            select(Sample).where(Sample.id == dto.sampleId)
+        )
+        sample = result.scalar_one_or_none()
+        
+        if not sample:
+            raise NotFoundException("样品不存在")
+        
+        if sample.status != SampleStatus.TESTING_COMPLETE:
+            raise ValidationException("样品状态不正确，只有检测完成的样品才能提交审核")
+        
+        # 获取或创建 WorkflowInstance
+        workflow_instance = await self._get_or_create_workflow_instance(db, dto.sampleId)
+        
+        # 检查是否已有审核任务
+        result = await db.execute(
+            select(AuditTask)
+            .join(Task, AuditTask.taskId == Task.id)
+            .where(
+                and_(
+                    Task.instanceId == workflow_instance.id,
+                    AuditTask.status.in_([AuditStatus.PENDING, AuditStatus.IN_PROGRESS])
+                )
+            )
+        )
+        existing_tasks = result.scalars().all()
+        
+        if existing_tasks:
+            raise ConflictException("该样品已有进行中的审核任务")
+        
+        # 更新样品状态为审核中
+        sample.status = SampleStatus.IN_AUDIT
+        
+        # 创建所有级别的审核任务
+        created_tasks = []
+        for level_config in audit_config.levels:
+            # 为每个审核级别创建一个 Task
+            workflow_task = Task(
+                id=str(uuid.uuid4()),
+                instanceId=workflow_instance.id,
+                nodeId=f"audit_level_{level_config.level}",
+                nodeName=level_config.name,
+                nodeType="audit",
+                status=TaskStatus.PENDING if level_config.level == 1 else TaskStatus.PENDING,
+                priority=Priority.NORMAL,
+                createdAt=datetime.utcnow(),
+                updatedAt=datetime.utcnow()
+            )
+            db.add(workflow_task)
+            await db.flush()  # 确保 Task 有 ID
+            
+            # 如果配置了审核人员，为每个审核人员创建审核任务
+            if level_config.auditorIds:
+                for auditor_id in level_config.auditorIds:
+                    audit_task = AuditTask(
+                        id=str(uuid.uuid4()),
+                        taskId=workflow_task.id,
+                        level=level_config.level,
+                        auditorId=auditor_id,
+                        status=AuditStatus.PENDING if level_config.level == 1 else AuditStatus.PENDING
+                    )
+                    db.add(audit_task)
+                    created_tasks.append(audit_task)
+                    
+                    # 记录审核任务创建历史
+                    history = AuditHistory(
+                        id=str(uuid.uuid4()),
+                        taskId=audit_task.id,
+                        action="created",
+                        changes={
+                            "level": level_config.level,
+                            "auditorId": auditor_id,
+                            "status": audit_task.status.value
+                        },
+                        performedBy="system"
+                    )
+                    db.add(history)
+            else:
+                # 如果没有配置审核人员，创建待分配的任务
+                audit_task = AuditTask(
+                    id=str(uuid.uuid4()),
+                    taskId=workflow_task.id,
+                    level=level_config.level,
+                    auditorId="UNASSIGNED",
+                    status=AuditStatus.PENDING
+                )
+                db.add(audit_task)
+                created_tasks.append(audit_task)
+                
+                # 记录审核任务创建历史
+                history = AuditHistory(
+                    id=str(uuid.uuid4()),
+                    taskId=audit_task.id,
+                    action="created",
+                    changes={
+                        "level": level_config.level,
+                        "auditorId": "UNASSIGNED",
+                        "status": audit_task.status.value
+                    },
+                    performedBy="system"
+                )
+                db.add(history)
+        
+        await db.commit()
+        
+        logger.info(f"样品 {dto.sampleId} 提交审核成功，创建了 {len(created_tasks)} 个审核任务")
+        
+        # 返回任务详情
+        return await self._get_audit_tasks_by_ids(db, [task.id for task in created_tasks])
+    
+    async def _get_or_create_workflow_instance(
+        self,
+        db: AsyncSession,
+        sample_id: str
+    ) -> WorkflowInstance:
+        """获取或创建工作流实例"""
+        # 检查是否已有工作流实例
+        result = await db.execute(
+            select(WorkflowInstance).where(WorkflowInstance.sampleId == sample_id)
+        )
+        instance = result.scalar_one_or_none()
+        
+        if instance:
+            return instance
+        
+        # 创建新的工作流实例
+        # 注意：这里使用一个默认的工作流 ID，实际应用中应该根据样品类型选择合适的工作流
+        instance = WorkflowInstance(
+            id=str(uuid.uuid4()),
+            workflowId="default-audit-workflow",  # 默认审核工作流
+            sampleId=sample_id,
+            currentNodes=[],
+            status=InstanceStatus.RUNNING,
+            variables={},
+            startedAt=datetime.utcnow()
+        )
+        db.add(instance)
+        await db.flush()
+        
+        logger.info(f"创建工作流实例: instanceId={instance.id}, sampleId={sample_id}")
+        
+        return instance
+    
+    async def perform_audit(
+        self,
+        db: AsyncSession,
+        task_id: str,
+        dto: PerformAuditDto,
+        auditor_id: str
+    ) -> AuditResult:
+        """
+        执行审核
+        处理审核决策并触发下一级审核
+        """
+        # 获取审核任务
+        result = await db.execute(
+            select(AuditTask).where(AuditTask.id == task_id)
+        )
+        task = result.scalar_one_or_none()
+        
+        if not task:
+            raise NotFoundException("审核任务不存在")
+        
+        # 通过 Task → WorkflowInstance 获取 sampleId
+        task_obj = await db.get(Task, task.taskId)
+        if not task_obj or not task_obj.instanceId:
+            raise NotFoundException("审核任务关联的工作流任务不存在")
+        
+        instance = await db.get(WorkflowInstance, task_obj.instanceId)
+        if not instance or not instance.sampleId:
+            raise NotFoundException("审核任务关联的工作流实例不存在")
+        
+        sample_id = instance.sampleId
+        
+        # 验证审核人员权限
+        # 1. 检查用户是否拥有admin角色
+        from app.models.user import User
+        from sqlalchemy.orm import selectinload
+        
+        user_result = await db.execute(
+            select(User)
+            .options(selectinload(User.roles))
+            .where(User.id == auditor_id)
+        )
+        current_user = user_result.scalar_one_or_none()
+        
+        has_admin_role = False
+        if current_user and current_user.roles:
+            has_admin_role = any(role.name == "admin" for role in current_user.roles)
+        
+        # 2. 如果不是admin角色，则检查是否是任务的指定审核人或UNASSIGNED任务
+        if not has_admin_role:
+            if task.auditorId != auditor_id and task.auditorId != "UNASSIGNED":
+                raise ValidationException("您没有权限审核此任务")
+        
+        # 验证任务状态
+        if task.status in [AuditStatus.APPROVED, AuditStatus.REJECTED]:
+            raise ValidationException("该审核任务已完成")
+        
+        # 验证审核顺序：检查前一级是否已通过
+        if task.level > 1:
+            # 通过 JOIN 查询获取同一样品的前一级审核任务
+            result = await db.execute(
+                select(AuditTask)
+                .join(Task, AuditTask.taskId == Task.id)
+                .join(WorkflowInstance, Task.instanceId == WorkflowInstance.id)
+                .where(
+                    and_(
+                        WorkflowInstance.sampleId == sample_id,
+                        AuditTask.level == task.level - 1
+                    )
+                )
+            )
+            previous_level_tasks = result.scalars().all()
+            
+            all_previous_approved = all(
+                t.status == AuditStatus.APPROVED and t.decision == AuditDecision.APPROVE
+                for t in previous_level_tasks
+            )
+            
+            if not all_previous_approved:
+                raise ValidationException("前一级审核尚未通过，无法进行当前级别审核")
+        
+        # 更新审核任务
+        task.status = AuditStatus.APPROVED if dto.decision == AuditDecision.APPROVE else AuditStatus.REJECTED
+        task.decision = dto.decision
+        task.comments = dto.comments
+        task.completedAt = datetime.utcnow()
+        if task.auditorId == "UNASSIGNED":
+            task.auditorId = auditor_id
+        
+        # 记录审核历史
+        history = AuditHistory(
+            id=str(uuid.uuid4()),
+            taskId=task_id,
+            action="review",
+            changes={
+                "decision": dto.decision.value,
+                "comments": dto.comments,
+                "previousStatus": AuditStatus.PENDING.value,
+                "newStatus": task.status.value
+            },
+            performedBy=auditor_id
+        )
+        db.add(history)
+        
+        is_complete = False
+        next_level = None
+        
+        if dto.decision == AuditDecision.APPROVE:
+            # 审核通过，检查是否还有下一级
+            result = await db.execute(
+                select(AuditTask)
+                .join(Task, AuditTask.taskId == Task.id)
+                .join(WorkflowInstance, Task.instanceId == WorkflowInstance.id)
+                .where(
+                    and_(
+                        WorkflowInstance.sampleId == sample_id,
+                        AuditTask.level == task.level + 1
+                    )
+                )
+            )
+            next_level_tasks = result.scalars().all()
+            
+            if next_level_tasks:
+                # 有下一级，激活下一级审核任务
+                next_level = task.level + 1
+                # 获取下一级审核任务的 ID 列表
+                next_level_task_ids = [t.id for t in next_level_tasks]
+                await db.execute(
+                    update(AuditTask)
+                    .where(AuditTask.id.in_(next_level_task_ids))
+                    .values(status=AuditStatus.PENDING)
+                )
+            else:
+                # 没有下一级，审核完成
+                is_complete = True
+                result = await db.execute(
+                    select(Sample).where(Sample.id == sample_id)
+                )
+                sample = result.scalar_one()
+                sample.status = SampleStatus.AUDIT_COMPLETE
+        
+        elif dto.decision == AuditDecision.REJECT:
+            # 审核拒绝，整个审核流程结束
+            is_complete = True
+            result = await db.execute(
+                select(Sample).where(Sample.id == sample_id)
+            )
+            sample = result.scalar_one()
+            sample.status = SampleStatus.TESTING_COMPLETE  # 退回到检测完成状态
+            
+            # 将所有未完成的审核任务标记为拒绝
+            result = await db.execute(
+                select(AuditTask.id)
+                .join(Task, AuditTask.taskId == Task.id)
+                .join(WorkflowInstance, Task.instanceId == WorkflowInstance.id)
+                .where(
+                    and_(
+                        WorkflowInstance.sampleId == sample_id,
+                        AuditTask.status.in_([AuditStatus.PENDING, AuditStatus.IN_PROGRESS])
+                    )
+                )
+            )
+            pending_task_ids = [row[0] for row in result.all()]
+            
+            if pending_task_ids:
+                await db.execute(
+                    update(AuditTask)
+                    .where(AuditTask.id.in_(pending_task_ids))
+                    .values(status=AuditStatus.REJECTED)
+                )
+        
+        elif dto.decision == AuditDecision.RETURN:
+            # 审核退回，需要重新检测
+            await self._handle_audit_return(
+                db,
+                task_id,
+                dto.comments or "审核退回",
+                auditor_id,
+                sample_id
+            )
+        
+        await db.commit()
+        
+        message = self._get_audit_result_message(dto.decision, is_complete, next_level)
+        
+        logger.info(f"审核完成: taskId={task_id}, decision={dto.decision.value}")
+        
+        return AuditResult(
+            taskId=task.id,
+            sampleId=sample_id,
+            level=task.level,
+            decision=dto.decision,
+            nextLevel=next_level,
+            isComplete=is_complete,
+            message=message
+        )
+    
+    async def _handle_audit_return(
+        self,
+        db: AsyncSession,
+        task_id: str,
+        reason: str,
+        auditor_id: str,
+        sample_id: str
+    ) -> None:
+        """处理审核退回"""
+        # 更新样品状态为检测中
+        result = await db.execute(
+            select(Sample).where(Sample.id == sample_id)
+        )
+        sample = result.scalar_one()
+        sample.status = SampleStatus.IN_TESTING
+        
+        # 取消所有未完成的审核任务（通过 JOIN 查询）
+        result = await db.execute(
+            select(AuditTask.id)
+            .join(Task, AuditTask.taskId == Task.id)
+            .join(WorkflowInstance, Task.instanceId == WorkflowInstance.id)
+            .where(
+                and_(
+                    WorkflowInstance.sampleId == sample_id,
+                    AuditTask.status.in_([AuditStatus.PENDING, AuditStatus.IN_PROGRESS])
+                )
+            )
+        )
+        pending_task_ids = [row[0] for row in result.all()]
+        
+        if pending_task_ids:
+            await db.execute(
+                update(AuditTask)
+                .where(AuditTask.id.in_(pending_task_ids))
+                .values(status=AuditStatus.REJECTED)
+            )
+        
+        logger.info(f"审核退回处理完成: taskId={task_id}, reason={reason}")
+    
+    async def reassign_audit_task(
+        self,
+        db: AsyncSession,
+        task_id: str,
+        from_auditor_id: str,
+        dto: ReassignAuditDto
+    ) -> AuditTaskResponse:
+        """审核任务转交"""
+        # 验证任务存在且属于当前审核人员
+        result = await db.execute(
+            select(AuditTask).where(AuditTask.id == task_id)
+        )
+        task = result.scalar_one_or_none()
+        
+        if not task:
+            raise NotFoundException("审核任务不存在")
+        
+        if task.auditorId != from_auditor_id:
+            raise ValidationException("您没有权限转交此任务")
+        
+        if task.status not in [AuditStatus.PENDING, AuditStatus.IN_PROGRESS]:
+            raise ValidationException("只能转交待审核或审核中的任务")
+        
+        # 更新审核人员
+        task.auditorId = dto.toAuditorId
+        task.comments = f"任务转交：{dto.reason}"
+        
+        # 记录转交历史
+        history = AuditHistory(
+            id=str(uuid.uuid4()),
+            taskId=task_id,
+            action="reassigned",
+            changes={
+                "fromAuditorId": from_auditor_id,
+                "toAuditorId": dto.toAuditorId,
+                "reason": dto.reason
+            },
+            performedBy=from_auditor_id
+        )
+        db.add(history)
+        
+        await db.commit()
+        
+        logger.info(f"审核任务转交成功: taskId={task_id}, from={from_auditor_id}, to={dto.toAuditorId}")
+        
+        return await self._format_audit_task(db, task)
+    
+    async def list_audit_tasks(
+        self,
+        db: AsyncSession,
+        query: AuditTaskQuery
+    ) -> Dict[str, Any]:
+        """查询审核任务列表"""
+        # 构建基础查询
+        stmt = select(AuditTask)
+        
+        # 如果需要按 sampleId 筛选，添加 JOIN
+        if query.sampleId:
+            stmt = (
+                stmt
+                .join(Task, AuditTask.taskId == Task.id)
+                .join(WorkflowInstance, Task.instanceId == WorkflowInstance.id)
+                .where(WorkflowInstance.sampleId == query.sampleId)
+            )
+        
+        # 其他筛选条件
+        conditions = []
+        if query.auditorId:
+            conditions.append(AuditTask.auditorId == query.auditorId)
+        if query.status:
+            conditions.append(AuditTask.status == query.status)
+        if query.level:
+            conditions.append(AuditTask.level == query.level)
+        
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        
+        # 查询总数
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        result = await db.execute(count_stmt)
+        total = result.scalar()
+        
+        # 查询数据
+        stmt = stmt.order_by(AuditTask.submittedAt.desc())
+        stmt = stmt.offset((query.page - 1) * query.pageSize).limit(query.pageSize)
+        
+        result = await db.execute(stmt)
+        tasks = result.scalars().all()
+        
+        # 格式化任务
+        items = []
+        for task in tasks:
+            formatted_task = await self._format_audit_task(db, task)
+            items.append(formatted_task)
+        
+        return {
+            "items": items,
+            "total": total,
+            "page": query.page,
+            "pageSize": query.pageSize
+        }
+    
+    async def get_audit_task(
+        self,
+        db: AsyncSession,
+        task_id: str
+    ) -> AuditTaskResponse:
+        """获取审核任务详情"""
+        result = await db.execute(
+            select(AuditTask).where(AuditTask.id == task_id)
+        )
+        task = result.scalar_one_or_none()
+        
+        if not task:
+            raise NotFoundException("审核任务不存在")
+        
+        return await self._format_audit_task(db, task)
+    
+    async def _get_audit_tasks_by_ids(
+        self,
+        db: AsyncSession,
+        task_ids: List[str]
+    ) -> List[AuditTaskResponse]:
+        """根据 ID 列表获取审核任务"""
+        result = await db.execute(
+            select(AuditTask).where(AuditTask.id.in_(task_ids))
+        )
+        tasks = result.scalars().all()
+        
+        formatted_tasks = []
+        for task in tasks:
+            formatted_task = await self._format_audit_task(db, task)
+            formatted_tasks.append(formatted_task)
+        
+        return formatted_tasks
+    
+    async def _format_audit_task(
+        self,
+        db: AsyncSession,
+        task: AuditTask
+    ) -> AuditTaskResponse:
+        """格式化审核任务"""
+        from app.models.result import Result
+        
+        # 通过 Task → WorkflowInstance → Sample 获取样品信息
+        task_obj = await db.get(Task, task.taskId)
+        sample_id = None
+        sample_dict = None
+        task_dict = None  # 添加task_dict变量
+        instance_dict = None  # 添加instance_dict变量
+        
+        if task_obj:
+            if task_obj.instanceId:
+                instance = await db.get(WorkflowInstance, task_obj.instanceId)
+                if instance and instance.sampleId:
+                    sample_id = instance.sampleId
+                    # 获取样品信息
+                    sample = await db.get(Sample, sample_id)
+                    
+                    if sample:
+                        # 查询该样品的检测结果
+                        results_query = await db.execute(
+                            select(Result).where(Result.sampleId == sample.id)
+                        )
+                        test_results = results_query.scalars().all()
+                        
+                        # 格式化检测结果
+                        results_list = []
+                        for test_result in test_results:
+                            results_list.append({
+                                "id": test_result.id,
+                                "sampleId": test_result.sampleId,
+                                "testItemId": test_result.testItemId,
+                                "parameter": test_result.parameter,
+                                "value": test_result.value,
+                                "textValue": test_result.textValue,
+                                "unit": test_result.unit,
+                                "method": test_result.method,
+                                "source": test_result.source.value if test_result.source else None,
+                                "isAbnormal": test_result.isAbnormal,
+                                "abnormalReason": test_result.abnormalReason,
+                                "enteredBy": test_result.enteredBy,
+                                "enteredAt": test_result.enteredAt.isoformat() if test_result.enteredAt else None,
+                                "reviewedBy": test_result.reviewedBy,
+                                "reviewedAt": test_result.reviewedAt.isoformat() if test_result.reviewedAt else None
+                            })
+                        
+                        sample_dict = {
+                            "id": sample.id,
+                            "barcode": sample.barcode,
+                            "sampleNumber": sample.sample_number,
+                            "sampleName": sample.sample_name,
+                            "sampleType": sample.sample_type,
+                            "sampleCategory": sample.sample_category,
+                            "clientName": sample.client_name,
+                            "clientContact": sample.client_contact,
+                            "samplingDate": sample.sampling_date.isoformat() if sample.sampling_date else None,
+                            "receivedDate": sample.received_date.isoformat() if sample.received_date else None,
+                            "samplingLocation": sample.sampling_location,
+                            "samplingPerson": sample.sampling_person,
+                            "storageLocation": sample.storage_location,
+                            "storageCondition": sample.storage_condition,
+                            "status": sample.status.value,
+                            "priority": sample.priority.value if sample.priority else None,
+                            "description": sample.description,
+                            "remarks": sample.remarks,
+                            "results": results_list
+                        }
+                    
+                    # 格式化instance信息（包含sample）
+                    instance_dict = {
+                        "id": instance.id,
+                        "workflowId": instance.workflowId,
+                        "sampleId": instance.sampleId,
+                        "status": instance.status.value if instance.status else None,
+                        "sample": sample_dict  # 嵌套样品信息
+                    }
+            
+            # 格式化task信息（包含instance）
+            task_dict = {
+                "id": task_obj.id,
+                "nodeId": task_obj.nodeId,
+                "nodeName": task_obj.nodeName,
+                "nodeType": task_obj.nodeType,
+                "assignedTo": task_obj.assignedTo,
+                "assignedAt": task_obj.assignedAt.isoformat() if task_obj.assignedAt else None,
+                "status": task_obj.status.value if task_obj.status else None,
+                "priority": task_obj.priority.value if task_obj.priority else None,
+                "completedAt": task_obj.completedAt.isoformat() if task_obj.completedAt else None,
+                "createdAt": task_obj.createdAt.isoformat() if task_obj.createdAt else None,
+                "instance": instance_dict  # 嵌套工作流实例信息
+            }
+        
+        return AuditTaskResponse(
+            id=task.id,
+            sampleId=sample_id,  # 从 WorkflowInstance 获取的 sampleId
+            level=task.level,
+            auditorId=task.auditorId,
+            status=task.status,
+            decision=task.decision,
+            comments=task.comments,
+            submittedAt=task.submittedAt,
+            completedAt=task.completedAt,
+            sample=sample_dict,  # 保留扁平的sample字段（向后兼容）
+            task=task_dict  # 添加task字段（包含嵌套的instance和sample）
+        )
+    
+    def _get_audit_result_message(
+        self,
+        decision: AuditDecision,
+        is_complete: bool,
+        next_level: Optional[int]
+    ) -> str:
+        """获取审核结果消息"""
+        if decision == AuditDecision.APPROVE:
+            if is_complete:
+                return "审核通过，所有审核流程已完成"
+            elif next_level:
+                return f"审核通过，已进入第 {next_level} 级审核"
+            return "审核通过"
+        elif decision == AuditDecision.REJECT:
+            return "审核拒绝，审核流程已终止"
+        elif decision == AuditDecision.RETURN:
+            return "审核退回，样品需要重新检测"
+        return "审核完成"
+    
+    async def get_audit_statistics(
+        self,
+        db: AsyncSession
+    ) -> AuditStatistics:
+        """获取审核统计信息"""
+        now = datetime.utcnow()
+        today_start = datetime(now.year, now.month, now.day)
+        week_start = now - timedelta(days=7)
+        month_start = datetime(now.year, now.month, 1)
+        
+        # 获取待审核任务数量
+        result = await db.execute(
+            select(func.count(AuditTask.id)).where(
+                AuditTask.status == AuditStatus.PENDING
+            )
+        )
+        pending = result.scalar()
+        
+        # 获取今日完成的审核任务
+        result = await db.execute(
+            select(func.count(AuditTask.id)).where(
+                and_(
+                    AuditTask.status.in_([AuditStatus.APPROVED, AuditStatus.REJECTED]),
+                    AuditTask.completedAt >= today_start
+                )
+            )
+        )
+        today_completed = result.scalar()
+        
+        # 获取本周完成的审核任务
+        result = await db.execute(
+            select(func.count(AuditTask.id)).where(
+                and_(
+                    AuditTask.status.in_([AuditStatus.APPROVED, AuditStatus.REJECTED]),
+                    AuditTask.completedAt >= week_start
+                )
+            )
+        )
+        week_completed = result.scalar()
+        
+        # 获取本月完成的审核任务
+        result = await db.execute(
+            select(func.count(AuditTask.id)).where(
+                and_(
+                    AuditTask.status.in_([AuditStatus.APPROVED, AuditStatus.REJECTED]),
+                    AuditTask.completedAt >= month_start
+                )
+            )
+        )
+        month_completed = result.scalar()
+        
+        # 计算审核通过率（本月）
+        result = await db.execute(
+            select(func.count(AuditTask.id)).where(
+                and_(
+                    AuditTask.status == AuditStatus.APPROVED,
+                    AuditTask.decision == AuditDecision.APPROVE,
+                    AuditTask.completedAt >= month_start
+                )
+            )
+        )
+        month_approved = result.scalar()
+        
+        approval_rate = (month_approved / month_completed * 100) if month_completed > 0 else 0
+        
+        # 计算平均处理时间（小时）
+        result = await db.execute(
+            select(AuditTask).where(
+                and_(
+                    AuditTask.status.in_([AuditStatus.APPROVED, AuditStatus.REJECTED]),
+                    AuditTask.completedAt >= month_start,
+                    AuditTask.completedAt.isnot(None)
+                )
+            )
+        )
+        completed_tasks = result.scalars().all()
+        
+        total_processing_time = 0
+        for task in completed_tasks:
+            if task.completedAt:
+                processing_time = (task.completedAt - task.submittedAt).total_seconds()
+                total_processing_time += processing_time
+        
+        average_processing_time = (
+            total_processing_time / len(completed_tasks) / 3600
+            if completed_tasks else 0
+        )
+        
+        return AuditStatistics(
+            pending=pending,
+            todayCompleted=today_completed,
+            weekCompleted=week_completed,
+            monthCompleted=month_completed,
+            approvalRate=round(approval_rate, 1),
+            averageProcessingTime=round(average_processing_time, 1)
+        )
+
+    
+    # ============================================
+    # 审核意见模板管理方法
+    # ============================================
+    
+    async def list_templates(
+        self,
+        db: AsyncSession,
+        template_type: Optional[str] = None,
+        is_default: Optional[bool] = None
+    ) -> List[AuditCommentTemplateResponse]:
+        """获取审核意见模板列表"""
+        conditions = []
+        if template_type:
+            conditions.append(AuditCommentTemplate.type == template_type)
+        if is_default is not None:
+            conditions.append(AuditCommentTemplate.isDefault == is_default)
+        
+        stmt = select(AuditCommentTemplate)
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        stmt = stmt.order_by(
+            AuditCommentTemplate.isDefault.desc(),
+            AuditCommentTemplate.usageCount.desc(),
+            AuditCommentTemplate.createdAt.desc()
+        )
+        
+        result = await db.execute(stmt)
+        templates = result.scalars().all()
+        
+        logger.info(f"获取审核意见模板列表成功，共 {len(templates)} 条")
+        
+        return [
+            AuditCommentTemplateResponse.from_orm(template)
+            for template in templates
+        ]
+    
+    async def get_template_by_id(
+        self,
+        db: AsyncSession,
+        template_id: str
+    ) -> AuditCommentTemplateResponse:
+        """根据 ID 获取审核意见模板"""
+        result = await db.execute(
+            select(AuditCommentTemplate).where(AuditCommentTemplate.id == template_id)
+        )
+        template = result.scalar_one_or_none()
+        
+        if not template:
+            raise NotFoundException("审核意见模板不存在")
+        
+        logger.info(f"获取审核意见模板成功: id={template_id}")
+        
+        return AuditCommentTemplateResponse.from_orm(template)
+    
+    async def create_template(
+        self,
+        db: AsyncSession,
+        dto: CreateTemplateDto,
+        created_by: str = "system"
+    ) -> AuditCommentTemplateResponse:
+        """创建审核意见模板"""
+        # 验证模板名称唯一性
+        result = await db.execute(
+            select(AuditCommentTemplate).where(AuditCommentTemplate.name == dto.name)
+        )
+        existing_template = result.scalar_one_or_none()
+        
+        if existing_template:
+            raise ConflictException("模板名称已存在")
+        
+        # 创建模板
+        template = AuditCommentTemplate(
+            id=str(uuid.uuid4()),
+            name=dto.name,
+            type=dto.type,
+            content=dto.content,
+            isDefault=dto.isDefault,
+            createdBy=created_by,
+            usageCount=0,
+            createdAt=datetime.utcnow(),
+            updatedAt=datetime.utcnow()
+        )
+        
+        db.add(template)
+        await db.commit()
+        await db.refresh(template)
+        
+        logger.info(f"创建审核意见模板成功: id={template.id}, name={template.name}")
+        
+        return AuditCommentTemplateResponse.from_orm(template)
+    
+    async def update_template(
+        self,
+        db: AsyncSession,
+        template_id: str,
+        dto: UpdateTemplateDto
+    ) -> AuditCommentTemplateResponse:
+        """更新审核意见模板"""
+        # 验证模板存在
+        result = await db.execute(
+            select(AuditCommentTemplate).where(AuditCommentTemplate.id == template_id)
+        )
+        template = result.scalar_one_or_none()
+        
+        if not template:
+            raise NotFoundException("审核意见模板不存在")
+        
+        # 如果更新名称，验证名称唯一性
+        if dto.name and dto.name != template.name:
+            result = await db.execute(
+                select(AuditCommentTemplate).where(AuditCommentTemplate.name == dto.name)
+            )
+            duplicate_template = result.scalar_one_or_none()
+            
+            if duplicate_template:
+                raise ConflictException("模板名称已存在")
+        
+        # 更新模板
+        if dto.name:
+            template.name = dto.name
+        if dto.type:
+            template.type = dto.type
+        if dto.content:
+            template.content = dto.content
+        if dto.isDefault is not None:
+            template.isDefault = dto.isDefault
+        
+        await db.commit()
+        await db.refresh(template)
+        
+        logger.info(f"更新审核意见模板成功: id={template_id}")
+        
+        return AuditCommentTemplateResponse.from_orm(template)
+    
+    async def delete_template(
+        self,
+        db: AsyncSession,
+        template_id: str
+    ) -> None:
+        """删除审核意见模板"""
+        # 验证模板存在
+        result = await db.execute(
+            select(AuditCommentTemplate).where(AuditCommentTemplate.id == template_id)
+        )
+        template = result.scalar_one_or_none()
+        
+        if not template:
+            raise NotFoundException("审核意见模板不存在")
+        
+        # 检查模板是否被使用
+        if template.usageCount > 0:
+            raise ValidationException("该模板已被使用，无法删除")
+        
+        # 删除模板
+        await db.delete(template)
+        await db.commit()
+        
+        logger.info(f"删除审核意见模板成功: id={template_id}, name={template.name}")
+    
+    async def increment_template_usage(
+        self,
+        db: AsyncSession,
+        template_id: str
+    ) -> None:
+        """增加模板使用次数"""
+        await db.execute(
+            update(AuditCommentTemplate)
+            .where(AuditCommentTemplate.id == template_id)
+            .values(usageCount=AuditCommentTemplate.usageCount + 1)
+        )
+        await db.commit()
+        
+        logger.info(f"增加模板使用次数成功: id={template_id}")
+    
+    # ============================================
+    # 审核流程配置管理方法
+    # ============================================
+    
+    async def list_workflow_configs(
+        self,
+        db: AsyncSession,
+        status: Optional[str] = None,
+        sample_type: Optional[str] = None
+    ) -> List[AuditWorkflowConfigResponse]:
+        """获取审核流程配置列表"""
+        logger.info(f"开始获取审核流程配置列表: status={status}, sample_type={sample_type}")
+        
+        conditions = []
+        if status:
+            conditions.append(AuditWorkflowConfig.status == status)
+        if sample_type:
+            # PostgreSQL 数组包含查询
+            conditions.append(AuditWorkflowConfig.sampleTypes.contains([sample_type]))
+        
+        stmt = select(AuditWorkflowConfig)
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        stmt = stmt.order_by(
+            AuditWorkflowConfig.status.desc(),
+            AuditWorkflowConfig.createdAt.desc()
+        )
+        
+        logger.info(f"执行查询: {stmt}")
+        
+        result = await db.execute(stmt)
+        configs = result.scalars().all()
+        
+        logger.info(f"获取审核流程配置列表成功，共 {len(configs)} 条")
+        
+        return [
+            AuditWorkflowConfigResponse.from_orm(config)
+            for config in configs
+        ]
+    
+    async def get_workflow_config_by_id(
+        self,
+        db: AsyncSession,
+        config_id: str
+    ) -> AuditWorkflowConfigResponse:
+        """根据 ID 获取审核流程配置"""
+        result = await db.execute(
+            select(AuditWorkflowConfig).where(AuditWorkflowConfig.id == config_id)
+        )
+        config = result.scalar_one_or_none()
+        
+        if not config:
+            raise NotFoundException("审核流程配置不存在")
+        
+        logger.info(f"获取审核流程配置成功: id={config_id}")
+        
+        return AuditWorkflowConfigResponse.from_orm(config)
+    
+    async def create_workflow_config(
+        self,
+        db: AsyncSession,
+        dto: CreateWorkflowConfigDto,
+        created_by: str = "system"
+    ) -> AuditWorkflowConfigResponse:
+        """创建审核流程配置"""
+        # 验证配置名称唯一性
+        result = await db.execute(
+            select(AuditWorkflowConfig).where(AuditWorkflowConfig.name == dto.name)
+        )
+        existing_config = result.scalar_one_or_none()
+        
+        if existing_config:
+            raise ConflictException("流程配置名称已存在")
+        
+        # 验证 levels 数组格式
+        self._validate_workflow_levels(dto.levels)
+        
+        # 创建配置
+        config = AuditWorkflowConfig(
+            id=str(uuid.uuid4()),
+            name=dto.name,
+            sampleTypes=dto.sampleTypes,
+            levels=[level.dict() for level in dto.levels],
+            parallelAudit=dto.parallelAudit,
+            status=WorkflowConfigStatus.INACTIVE,
+            createdBy=created_by,
+            createdAt=datetime.utcnow(),
+            updatedAt=datetime.utcnow()
+        )
+        
+        db.add(config)
+        await db.commit()
+        await db.refresh(config)
+        
+        logger.info(f"创建审核流程配置成功: id={config.id}, name={config.name}")
+        
+        return AuditWorkflowConfigResponse.from_orm(config)
+    
+    async def update_workflow_config(
+        self,
+        db: AsyncSession,
+        config_id: str,
+        dto: UpdateWorkflowConfigDto
+    ) -> AuditWorkflowConfigResponse:
+        """更新审核流程配置"""
+        # 验证配置存在
+        result = await db.execute(
+            select(AuditWorkflowConfig).where(AuditWorkflowConfig.id == config_id)
+        )
+        config = result.scalar_one_or_none()
+        
+        if not config:
+            raise NotFoundException("审核流程配置不存在")
+        
+        # 如果更新名称，验证名称唯一性
+        if dto.name and dto.name != config.name:
+            result = await db.execute(
+                select(AuditWorkflowConfig).where(AuditWorkflowConfig.name == dto.name)
+            )
+            duplicate_config = result.scalar_one_or_none()
+            
+            if duplicate_config:
+                raise ConflictException("流程配置名称已存在")
+        
+        # 如果更新 levels，验证格式
+        if dto.levels:
+            self._validate_workflow_levels(dto.levels)
+        
+        # 更新配置
+        if dto.name:
+            config.name = dto.name
+        if dto.sampleTypes:
+            config.sampleTypes = dto.sampleTypes
+        if dto.levels:
+            config.levels = [level.dict() for level in dto.levels]
+        if dto.parallelAudit is not None:
+            config.parallelAudit = dto.parallelAudit
+        if dto.status:
+            config.status = dto.status
+        
+        await db.commit()
+        await db.refresh(config)
+        
+        logger.info(f"更新审核流程配置成功: id={config_id}")
+        
+        return AuditWorkflowConfigResponse.from_orm(config)
+    
+    async def delete_workflow_config(
+        self,
+        db: AsyncSession,
+        config_id: str
+    ) -> None:
+        """删除审核流程配置"""
+        # 验证配置存在
+        result = await db.execute(
+            select(AuditWorkflowConfig).where(AuditWorkflowConfig.id == config_id)
+        )
+        config = result.scalar_one_or_none()
+        
+        if not config:
+            raise NotFoundException("审核流程配置不存在")
+        
+        # 检查配置是否正在使用
+        if config.status == WorkflowConfigStatus.ACTIVE:
+            raise ValidationException("该流程配置正在使用中，无法删除")
+        
+        # 删除配置
+        await db.delete(config)
+        await db.commit()
+        
+        logger.info(f"删除审核流程配置成功: id={config_id}, name={config.name}")
+    
+    def _validate_workflow_levels(self, levels: List[Any]) -> None:
+        """验证审核流程级别配置格式"""
+        if not levels or len(levels) == 0:
+            raise ValidationException("审核级别配置不能为空")
+        
+        # 验证每个级别包含必需字段
+        required_fields = ['order', 'name', 'role', 'required', 'autoAssign']
+        for level in levels:
+            level_dict = level.dict() if hasattr(level, 'dict') else level
+            for field in required_fields:
+                if field not in level_dict:
+                    raise ValidationException(f"审核级别配置缺少必需字段: {field}")
+        
+        # 验证 order 字段唯一性和连续性
+        orders = sorted([level.order if hasattr(level, 'order') else level['order'] for level in levels])
+        unique_orders = set(orders)
+        
+        if len(unique_orders) != len(orders):
+            raise ValidationException("审核级别的 order 字段必须唯一")
+        
+        # 验证 order 从 1 开始且连续
+        for i, order in enumerate(orders):
+            if order != i + 1:
+                raise ValidationException("审核级别的 order 字段必须从 1 开始且连续")
+    
+    # ============================================
+    # 审核历史记录方法
+    # ============================================
+    
+    async def get_audit_history(
+        self,
+        db: AsyncSession,
+        task_id: str
+    ) -> List[AuditHistoryResponse]:
+        """获取审核任务的历史记录"""
+        result = await db.execute(
+            select(AuditHistory)
+            .where(AuditHistory.taskId == task_id)
+            .order_by(AuditHistory.performedAt.asc())
+        )
+        history = result.scalars().all()
+        
+        logger.info(f"获取审核历史记录成功: taskId={task_id}, count={len(history)}")
+        
+        return [
+            AuditHistoryResponse.from_orm(record)
+            for record in history
+        ]
+    
+    # ============================================
+    # 样品放行相关方法
+    # ============================================
+    
+    async def validate_release_conditions(
+        self,
+        db: AsyncSession,
+        sample_id: str
+    ) -> Dict[str, Any]:
+        """验证样品放行前置条件"""
+        violations = []
+        
+        # 获取样品信息
+        result = await db.execute(
+            select(Sample).where(Sample.id == sample_id)
+        )
+        sample = result.scalar_one_or_none()
+        
+        if not sample:
+            violations.append("样品不存在")
+            return {"canRelease": False, "violations": violations}
+        
+        # 检查样品状态
+        if sample.status != SampleStatus.AUDIT_COMPLETE:
+            violations.append("样品审核未完成")
+        
+        # 检查审核任务是否全部通过（通过 JOIN 查询）
+        result = await db.execute(
+            select(AuditTask)
+            .join(Task, AuditTask.taskId == Task.id)
+            .join(WorkflowInstance, Task.instanceId == WorkflowInstance.id)
+            .where(WorkflowInstance.sampleId == sample_id)
+        )
+        audit_tasks = result.scalars().all()
+        
+        all_audit_tasks_approved = all(
+            task.status == AuditStatus.APPROVED and task.decision == AuditDecision.APPROVE
+            for task in audit_tasks
+        )
+        
+        if not all_audit_tasks_approved:
+            violations.append("存在未通过的审核任务")
+        
+        # 检查质量判定结果
+        result = await db.execute(
+            select(QualityJudgment).where(QualityJudgment.sampleId == sample_id)
+        )
+        quality_judgment = result.scalar_one_or_none()
+        
+        if not quality_judgment:
+            violations.append("样品未进行质量判定")
+        elif quality_judgment.result != "QUALIFIED":
+            violations.append("样品质量判定不合格")
+        
+        # 检查是否已放行
+        if sample.status == SampleStatus.RELEASED:
+            violations.append("样品已放行，不能重复放行")
+        
+        can_release = len(violations) == 0
+        
+        return {"canRelease": can_release, "violations": violations}
+    
+    async def release_sample(
+        self,
+        db: AsyncSession,
+        sample_id: str,
+        released_by: str
+    ) -> ReleaseSampleResponse:
+        """单个样品放行"""
+        # 验证放行前置条件
+        validation = await self.validate_release_conditions(db, sample_id)
+        
+        if not validation["canRelease"]:
+            raise ValidationException(f"样品放行条件不满足：{';'.join(validation['violations'])}")
+        
+        # 执行放行操作
+        result = await db.execute(
+            select(Sample).where(Sample.id == sample_id)
+        )
+        sample = result.scalar_one()
+        
+        sample.status = SampleStatus.RELEASED
+        sample.released_at = datetime.utcnow()
+        sample.released_by = released_by
+        
+        await db.commit()
+        
+        logger.info(f"样品放行成功: sampleId={sample_id}, barcode={sample.barcode}, releasedBy={released_by}")
+        
+        return ReleaseSampleResponse(
+            sampleId=sample.id,
+            barcode=sample.barcode,
+            sampleNumber=sample.sample_number,
+            releasedAt=sample.released_at,
+            releasedBy=sample.released_by,
+            message="样品放行成功"
+        )
+    
+    async def batch_release_samples(
+        self,
+        db: AsyncSession,
+        sample_ids: List[str],
+        released_by: str
+    ) -> BatchReleaseSamplesResponse:
+        """批量样品放行"""
+        results = []
+        
+        # 首先验证所有样品的放行条件
+        validation_results = []
+        for sample_id in sample_ids:
+            validation = await self.validate_release_conditions(db, sample_id)
+            validation_results.append({
+                "sampleId": sample_id,
+                "canRelease": validation["canRelease"],
+                "violations": validation["violations"]
+            })
+        
+        # 过滤出可以放行的样品
+        releasable_sample_ids = [
+            v["sampleId"] for v in validation_results if v["canRelease"]
+        ]
+        
+        # 记录验证失败的样品
+        for v in validation_results:
+            if not v["canRelease"]:
+                results.append(BatchReleaseResult(
+                    sampleId=v["sampleId"],
+                    success=False,
+                    error=f"放行条件不满足：{';'.join(v['violations'])}"
+                ))
+        
+        # 批量放行可以放行的样品
+        if releasable_sample_ids:
+            result = await db.execute(
+                select(Sample).where(Sample.id.in_(releasable_sample_ids))
+            )
+            samples = result.scalars().all()
+            
+            for sample in samples:
+                sample.status = SampleStatus.RELEASED
+                sample.released_at = datetime.utcnow()
+                sample.released_by = released_by
+                
+                results.append(BatchReleaseResult(
+                    sampleId=sample.id,
+                    success=True,
+                    barcode=sample.barcode,
+                    sampleNumber=sample.sample_number,
+                    releasedAt=sample.released_at
+                ))
+            
+            await db.commit()
+        
+        successful = sum(1 for r in results if r.success)
+        failed = sum(1 for r in results if not r.success)
+        
+        logger.info(f"批量样品放行完成: total={len(sample_ids)}, successful={successful}, failed={failed}")
+        
+        return BatchReleaseSamplesResponse(
+            total=len(sample_ids),
+            successful=successful,
+            failed=failed,
+            results=results
+        )
+    
+    # ============================================
+    # 审核数据导出方法
+    # ============================================
+    
+    async def export_audit_tasks(
+        self,
+        db: AsyncSession,
+        query: AuditTaskQuery
+    ) -> str:
+        """
+        导出审核任务数据为 Excel 格式
+        
+        Args:
+            db: 数据库会话
+            query: 查询条件
+            
+        Returns:
+            str: 导出文件的路径
+        """
+        # 构建基础查询
+        stmt = select(AuditTask)
+        
+        # 如果需要按 sampleId 筛选，添加 JOIN
+        if query.sampleId:
+            stmt = (
+                stmt
+                .join(Task, AuditTask.taskId == Task.id)
+                .join(WorkflowInstance, Task.instanceId == WorkflowInstance.id)
+                .where(WorkflowInstance.sampleId == query.sampleId)
+            )
+        
+        # 其他筛选条件
+        conditions = []
+        if query.auditorId:
+            conditions.append(AuditTask.auditorId == query.auditorId)
+        if query.status:
+            conditions.append(AuditTask.status == query.status)
+        if query.level:
+            conditions.append(AuditTask.level == query.level)
+        
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        
+        stmt = stmt.order_by(AuditTask.submittedAt.desc())
+        
+        result = await db.execute(stmt)
+        tasks = result.scalars().all()
+        
+        # 格式化任务数据
+        formatted_tasks = []
+        for task in tasks:
+            formatted_task = await self._format_audit_task(db, task)
+            # 转换为字典格式
+            task_dict = {
+                "id": formatted_task.id,
+                "sampleId": formatted_task.sampleId,
+                "level": formatted_task.level,
+                "auditorId": formatted_task.auditorId,
+                "status": formatted_task.status.value if formatted_task.status else "",
+                "decision": formatted_task.decision.value if formatted_task.decision else None,
+                "comments": formatted_task.comments,
+                "submittedAt": formatted_task.submittedAt,
+                "completedAt": formatted_task.completedAt,
+                "sample": formatted_task.sample
+            }
+            formatted_tasks.append(task_dict)
+        
+        # 调用导出服务
+        file_path = await export_service.export_audit_tasks_to_excel(formatted_tasks)
+        
+        logger.info(f"审核任务导出成功: file_path={file_path}, count={len(formatted_tasks)}")
+        
+        return file_path
+
+
+# 创建服务实例
+audit_service = AuditService()
+

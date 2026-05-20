@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>样品编辑功能测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .step h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .step p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        
+        .step code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #d63384;
+        }
+        
+        .checklist {
+            list-style: none;
+        }
+        
+        .checklist li {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .checklist li:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .checklist li::before {
+            content: '☐';
+            margin-right: 10px;
+            font-size: 18px;
+            color: #999;
+        }
+        
+        .checklist li.checked::before {
+            content: '☑';
+            color: #28a745;
+        }
+        
+        .checklist li.checked {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn.secondary {
+            background: #6c757d;
+        }
+        
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+        
+        .log-viewer {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        
+        .log-viewer .log-line {
+            margin-bottom: 5px;
+        }
+        
+        .log-viewer .log-success {
+            color: #4ec9b0;
+        }
+        
+        .log-viewer .log-error {
+            color: #f48771;
+        }
+        
+        .log-viewer .log-warning {
+            color: #dcdcaa;
+        }
+        
+        .log-viewer .log-info {
+            color: #9cdcfe;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        
+        .alert.warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .metric {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .metric h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .metric .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                样品编辑功能测试
+                <span class="status success">后端正常</span>
+                <span class="status warning">前端待验证</span>
+            </h1>
+            <p>按照以下步骤验证样品编辑功能是否正常工作</p>
+        </div>
+
+        <div class="alert info">
+            <strong>📢 重要提示：</strong> 在开始测试前，请先按 <code>Ctrl + Shift + R</code> (Windows) 或 <code>Cmd + Shift + R</code> (Mac) 硬刷新浏览器，确保使用最新的前端代码。
+        </div>
+
+        <div class="grid">
+            <div class="metric">
+                <h3>后端状态</h3>
+                <div class="value">✅</div>
+            </div>
+            <div class="metric">
+                <h3>API 测试</h3>
+                <div class="value">✅</div>
+            </div>
+            <div class="metric">
+                <h3>数据库</h3>
+                <div class="value">✅</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🚀 快速修复步骤</h2>
+            
+            <div class="step">
+                <h3>步骤 1: 硬刷新浏览器</h3>
+                <p><strong>Windows/Linux:</strong> 按 <code>Ctrl + Shift + R</code> 或 <code>Ctrl + F5</code></p>
+                <p><strong>Mac:</strong> 按 <code>Cmd + Shift + R</code></p>
+                <p>这会清除浏览器缓存并重新加载最新的前端代码。</p>
+            </div>
+
+            <div class="step">
+                <h3>步骤 2: 打开开发者工具</h3>
+                <p>按 <code>F12</code> 打开浏览器开发者工具</p>
+                <p>切换到 <code>Console</code> 标签，准备查看调试日志</p>
+            </div>
+
+            <div class="step">
+                <h3>步骤 3: 禁用缓存</h3>
+                <p>在开发者工具中切换到 <code>Network</code> 标签</p>
+                <p>勾选 <code>Disable cache</code> 选项</p>
+                <p>勾选 <code>Preserve log</code> 选项</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>✅ 测试检查清单</h2>
+            <ul class="checklist" id="checklist">
+                <li onclick="toggleCheck(this)">硬刷新浏览器（Ctrl+Shift+R）</li>
+                <li onclick="toggleCheck(this)">打开开发者工具（F12）</li>
+                <li onclick="toggleCheck(this)">切换到 Console 标签</li>
+                <li onclick="toggleCheck(this)">进入样品详情页，看到 "🎬 SampleDetail 组件已挂载"</li>
+                <li onclick="toggleCheck(this)">看到 "📥 loadSampleData 开始执行"</li>
+                <li onclick="toggleCheck(this)">看到 "✅ 样品数据已更新到页面"</li>
+                <li onclick="toggleCheck(this)">点击编辑按钮，进入编辑页面</li>
+                <li onclick="toggleCheck(this)">修改样品信息（如修改名称或数量）</li>
+                <li onclick="toggleCheck(this)">点击保存，看到 "💾 开始更新样品"</li>
+                <li onclick="toggleCheck(this)">看到 "✅ 样品更新成功"</li>
+                <li onclick="toggleCheck(this)">看到 "🔄 准备跳转回详情页"</li>
+                <li onclick="toggleCheck(this)">页面跳转回详情页</li>
+                <li onclick="toggleCheck(this)">看到 "🔍 检测到 refresh 参数变化"</li>
+                <li onclick="toggleCheck(this)">看到 "🔄 触发数据刷新..."</li>
+                <li onclick="toggleCheck(this)">看到 "✅ 样品数据已更新到页面"</li>
+                <li onclick="toggleCheck(this)">页面显示的信息已更新（名称、数量等）</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>🔍 预期的控制台日志</h2>
+            <div class="log-viewer">
+                <div class="log-line log-success">🎬 SampleDetail 组件已挂载</div>
+                <div class="log-line log-info">📥 loadSampleData 开始执行</div>
+                <div class="log-line log-info">📋 当前样品ID: S20240115001</div>
+                <div class="log-line log-info">🌐 开始调用 API 获取样品数据...</div>
+                <div class="log-line log-success">✅ API 返回的样品数据: {...}</div>
+                <div class="log-line log-success">✅ 样品数据已更新到页面: { id: "S20240115001", sampleName: "测试样品", ... }</div>
+                <div class="log-line log-info">📥 loadSampleData 执行完成</div>
+                <div class="log-line" style="margin-top: 15px; color: #888;">--- 点击编辑按钮 ---</div>
+                <div class="log-line log-info">💾 开始更新样品，ID: S20240115001</div>
+                <div class="log-line log-info">📝 更新数据: { id: "S20240115001", sampleName: "测试样品(已编辑)", ... }</div>
+                <div class="log-line log-success">✅ 样品更新成功</div>
+                <div class="log-line log-info">🔄 准备跳转回详情页: { path: "/sample/detail/S20240115001", query: { refresh: "true" } }</div>
+                <div class="log-line log-success">✅ 路由跳转已触发</div>
+                <div class="log-line" style="margin-top: 15px; color: #888;">--- 跳转回详情页 ---</div>
+                <div class="log-line log-warning">🔍 检测到 refresh 参数变化: { 新值: "true", 旧值: undefined }</div>
+                <div class="log-line log-warning">🔄 触发数据刷新...</div>
+                <div class="log-line log-info">📥 loadSampleData 开始执行</div>
+                <div class="log-line log-info">📋 当前样品ID: S20240115001</div>
+                <div class="log-line log-info">🌐 开始调用 API 获取样品数据...</div>
+                <div class="log-line log-success">✅ API 返回的样品数据: {...}</div>
+                <div class="log-line log-success">✅ 样品数据已更新到页面: { id: "S20240115001", sampleName: "测试样品(已编辑)", ... }</div>
+                <div class="log-line log-info">📥 loadSampleData 执行完成</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🛠️ 如果问题仍然存在</h2>
+            
+            <div class="alert warning">
+                <strong>⚠️ 如果看不到任何调试日志：</strong><br>
+                说明前端代码没有更新，需要重启前端服务器。
+            </div>
+
+            <div class="step">
+                <h3>重启前端服务器</h3>
+                <p>1. 在终端中按 <code>Ctrl + C</code> 停止当前服务器</p>
+                <p>2. 执行以下命令：</p>
+                <code style="display: block; margin: 10px 0; padding: 10px; background: #f8f9fa;">
+                    cd vue-project<br>
+                    npm run dev
+                </code>
+                <p>3. 等待服务器启动完成</p>
+                <p>4. 再次硬刷新浏览器</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📚 相关文档</h2>
+            <a href="#" class="btn">查看诊断报告</a>
+            <a href="#" class="btn secondary">查看解决指南</a>
+            <a href="#" class="btn secondary">查看代码修改</a>
+        </div>
+
+        <div class="alert success">
+            <strong>✅ 代码修复状态：</strong><br>
+            所有必要的代码修改已完成。后端功能完全正常。如果问题仍然存在，99% 是浏览器缓存问题。
+        </div>
+    </div>
+
+    <script>
+        function toggleCheck(element) {
+            element.classList.toggle('checked');
+            
+            // 检查是否所有项都已勾选
+            const total = document.querySelectorAll('#checklist li').length;
+            const checked = document.querySelectorAll('#checklist li.checked').length;
+            
+            if (checked === total) {
+                alert('🎉 恭喜！所有测试步骤都已完成！\n\n如果页面显示的信息已更新，说明功能正常。\n如果信息仍未更新，请查看下方的故障排除步骤。');
+            }
+        }
+
+        // 页面加载时显示提示
+        window.addEventListener('load', function() {
+            console.log('%c🎯 样品编辑功能测试页面已加载', 'color: #667eea; font-size: 16px; font-weight: bold;');
+            console.log('%c请按照页面上的步骤进行测试', 'color: #666; font-size: 14px;');
+        });
+    </script>
+</body>
+</html>

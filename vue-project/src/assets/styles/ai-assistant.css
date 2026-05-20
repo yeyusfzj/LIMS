@@ -1,0 +1,360 @@
+/* AI助手专用样式 */
+
+/* AI主题色 - 紫色渐变 */
+:root {
+  --ai-primary: #667eea;
+  --ai-secondary: #764ba2;
+  --ai-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --ai-light: rgba(102, 126, 234, 0.1);
+  --ai-shadow: rgba(102, 126, 234, 0.3);
+}
+
+/* AI助手全局样式 */
+.ai-assistant-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* 消息动画 - 滑入效果 */
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.message-slide-in-left {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+.message-slide-in-right {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+/* AI思考动画 - 跳动的点 */
+@keyframes dotBounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.ai-thinking-dots {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px;
+}
+
+.ai-thinking-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--ai-primary);
+  border-radius: 50%;
+  animation: dotBounce 1.4s infinite ease-in-out;
+}
+
+.ai-thinking-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.ai-thinking-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+/* 悬浮按钮脉冲动画 */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.ai-float-button-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 渐变文字效果 */
+.ai-gradient-text {
+  background: var(--ai-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
+}
+
+/* AI卡片样式 */
+.ai-card {
+  border: 2px solid transparent;
+  background: linear-gradient(white, white) padding-box,
+              var(--ai-gradient) border-box;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.ai-card:hover {
+  box-shadow: 0 8px 24px var(--ai-shadow);
+  transform: translateY(-2px);
+}
+
+/* AI按钮样式 */
+.ai-button {
+  background: var(--ai-gradient);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px var(--ai-shadow);
+}
+
+.ai-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--ai-shadow);
+}
+
+.ai-button:active {
+  transform: translateY(0);
+}
+
+/* AI徽章样式 */
+.ai-badge {
+  background: var(--ai-gradient);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 打字机效果 */
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blink {
+  50% {
+    border-color: transparent;
+  }
+}
+
+.typing-effect {
+  overflow: hidden;
+  border-right: 2px solid var(--ai-primary);
+  white-space: nowrap;
+  animation: typing 2s steps(40, end), blink 0.75s step-end infinite;
+}
+
+/* 加载骨架屏 */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.ai-skeleton {
+  background: linear-gradient(to right, #f0f0f0 8%, #e0e0e0 18%, #f0f0f0 33%);
+  background-size: 800px 104px;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 4px;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .ai-assistant-container {
+    font-size: 14px;
+  }
+
+  .ai-button {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .ai-badge {
+    padding: 3px 10px;
+    font-size: 11px;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ai-light: rgba(102, 126, 234, 0.2);
+    --ai-shadow: rgba(102, 126, 234, 0.4);
+  }
+
+  .ai-card {
+    background: linear-gradient(#1a1a1a, #1a1a1a) padding-box,
+                var(--ai-gradient) border-box;
+  }
+
+  .ai-skeleton {
+    background: linear-gradient(to right, #2a2a2a 8%, #3a3a3a 18%, #2a2a2a 33%);
+  }
+}
+
+/* 滚动条美化 */
+.ai-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ai-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.ai-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--ai-gradient);
+  border-radius: 3px;
+}
+
+.ai-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--ai-secondary);
+}
+
+/* 工具提示样式 */
+.ai-tooltip {
+  background: var(--ai-gradient);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 4px 12px var(--ai-shadow);
+}
+
+/* 分隔线样式 */
+.ai-divider {
+  height: 1px;
+  background: var(--ai-gradient);
+  opacity: 0.2;
+  margin: 16px 0;
+}
+
+/* 高亮效果 */
+.ai-highlight {
+  background: var(--ai-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--ai-primary);
+  font-weight: 500;
+}
+
+/* 成功/错误状态 */
+.ai-success {
+  color: #67c23a;
+}
+
+.ai-error {
+  color: #f56c6c;
+}
+
+.ai-warning {
+  color: #e6a23c;
+}
+
+/* 图表容器样式 */
+.ai-chart-container {
+  background: var(--ai-light);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+/* 代码块样式 */
+.ai-code-block {
+  background: #f5f7fa;
+  border-left: 3px solid var(--ai-primary);
+  padding: 12px 16px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  overflow-x: auto;
+}
+
+/* 标签云样式 */
+.ai-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  margin: 4px;
+  background: var(--ai-light);
+  color: var(--ai-primary);
+  border-radius: 16px;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.ai-tag:hover {
+  background: var(--ai-gradient);
+  color: white;
+  transform: scale(1.05);
+}
+
+/* 进度条样式 */
+.ai-progress {
+  height: 6px;
+  background: #e4e7ed;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ai-progress-bar {
+  height: 100%;
+  background: var(--ai-gradient);
+  transition: width 0.3s ease;
+}
+
+/* 空状态样式 */
+.ai-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #909399;
+}
+
+.ai-empty-icon {
+  font-size: 48px;
+  color: var(--ai-primary);
+  opacity: 0.5;
+  margin-bottom: 16px;
+}
+
+.ai-empty-text {
+  font-size: 14px;
+}
